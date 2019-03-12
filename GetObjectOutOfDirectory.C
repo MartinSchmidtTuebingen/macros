@@ -1,11 +1,11 @@
-TObject* GetObjectOutOfCollection(TCollection* coll, TString objectName, TObject* dirofSearchedFile = 0x0);
+TObject* GetObjectOutOfCollection(TCollection* coll, TString objectName);
 
-TObject* GetObjectOutOfDirectory(TString fileName, TString objectName, TObject* dirofSearchedFile = 0x0) {
+TObject* GetObjectOutOfDirectory(TString fileName, TString objectName) {
   TFile* f = new TFile(fileName.Data());
   return GetObjectOutOfDirectory(f,objectName);
 }
 
-TObject* GetObjectOutOfDirectory(TDirectoryFile* d, TString objectName, TObject* dirofSearchedFile = 0x0) {
+TObject* GetObjectOutOfDirectory(TDirectoryFile* d, TString objectName) {
   if (!d || d->IsZombie())
     return 0x0;
   
@@ -20,22 +20,19 @@ TObject* GetObjectOutOfDirectory(TDirectoryFile* d, TString objectName, TObject*
         continue;
       
       if (dirobj->InheritsFrom("TDirectory")) 
-        obj = GetObjectOutOfDirectory((TDirectoryFile*)dirobj, objectName, dirofSearchedFile);
+        obj = GetObjectOutOfDirectory((TDirectoryFile*)dirobj, objectName);
       else if (dirobj->InheritsFrom("TCollection"))
-        obj = GetObjectOutOfCollection((TCollection*)dirobj, objectName, dirofSearchedFile);
+        obj = GetObjectOutOfCollection((TCollection*)dirobj, objectName);
       
       if (obj)
         break;
     }
   }
-  else {
-    dirofSearchedFile = d;
-  }  
   
   return obj;
 }
 
-TObject *GetObjectOutOfCollection(TCollection* coll, TString objectName, TObject* dirofSearchedFile) {
+TObject *GetObjectOutOfCollection(TCollection* coll, TString objectName) {
   TObject* obj = 0x0;
   obj = coll->FindObject(objectName.Data());
   
@@ -44,18 +41,15 @@ TObject *GetObjectOutOfCollection(TCollection* coll, TString objectName, TObject
     TObject* collobj = it();
     while (collobj) {
       if (collobj->InheritsFrom("TDirectory")) 
-        obj = GetObjectOutOfDirectory((TDirectoryFile*)collobj, objectName, dirofSearchedFile);
+        obj = GetObjectOutOfDirectory((TDirectoryFile*)collobj, objectName);
       else if (collobj->InheritsFrom("TCollection"))
-        obj = GetObjectOutOfCollection((TCollection*)collobj, objectName, dirofSearchedFile);
+        obj = GetObjectOutOfCollection((TCollection*)collobj, objectName);
       
       if (obj)
         break;
       
       collobj = it();
     }
-  }
-  else {
-    dirofSearchedFile = coll;
   }
   return obj;
 }
