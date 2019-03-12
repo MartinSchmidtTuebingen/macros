@@ -2463,7 +2463,74 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
   TString saveFilePathName = Form("%s/%s", pathSaveData.Data(), saveFileName.Data());
   TFile* saveFile = TFile::Open(saveFilePathName.Data(), "RECREATE");
   
+  TH1* hMCgenYield[AliPID::kSPECIES] = {0x0, };
+  TH1* hMCgenToPiRatio[AliPID::kSPECIES] = {0x0, };
+  TH1* hMCgenFractions[AliPID::kSPECIES] = {0x0, };
+  TH1D* hMCgenYieldTotal = 0x0;
   
+  Int_t maxBinWithContent = TMath::Max(TMath::Max(hYield[AliPID::kKaon]->FindLastBinAbove(1e-10),hYield[AliPID::kProton]->FindLastBinAbove(1e-10)),hYield[AliPID::kPion]->FindLastBinAbove(1e-10));
+  
+  for (Int_t species=0;species<AliPID::kSPECIES;++species) {
+    dataRebinned->SetRangeUser(iMCid, species+1,species+1,kTRUE);
+    hMCgenYield[species] = dataRebinned->Project(kStepGenWithGenCuts,iObsAxis);
+    hMCgenYield[species]->SetNameTitle(Form("hMCTruth_%s", AliPID::ParticleShortName(species)), Form("%s", AliPID::ParticleLatexName(species)));
+    hMCgenYield[species]->SetLineColor(hYield[species]->GetLineColor());
+    hMCgenYield[species]->SetMarkerColor(hYield[species]->GetLineColor()); 
+    hMCgenYield[species]->SetMarkerStyle(24);
+    hMCgenYield[species]->Scale(restrictJetPtAxis ? 1.0/nJetsGen : 1.0/nMCEvents);
+    if (species == 0) {
+      hMCgenYieldTotal = (TH1D*)hMCgenYield[0]->Clone();
+      hMCgenYieldTotal->SetNameTitle("hMCTruthGenYieldTotal", "Total Yield");
+      hMCgenYieldTotal->SetLineColor(kBlack);
+      hMCgenYieldTotal->SetMarkerColor(kBlack);
+    }
+    else
+      hMCgenYieldTotal->Add(hMCgenYield[species]);
+  }
+  
+  for (Int_t i=maxBinWithContent+1;i<hMCgenYieldTotal->GetNbinsX();++i) {
+    for (Int_t species=0;species<AliPID::kSPECIES;++species) {
+      hMCgenYield[species]->SetBinContent(i,0.0);
+      hMCgenYield[species]->SetBinError(i,0.0);
+    }
+    hMCgenYieldTotal->SetBinContent(i,0.0);
+    hMCgenYieldTotal->SetBinError(i,0.0);    
+  }
+  
+  for (Int_t species=0;species<AliPID::kSPECIES;++species) {
+    if (species == AliPID::kPion)
+      continue;
+    
+    hMCgenToPiRatio[species] = (TH1*)hMCgenYield[species]->Clone();
+    hMCgenToPiRatio[species]->SetNameTitle(Form("hMCTruth_RatioToPi_%s", AliPID::ParticleShortName(species)), Form("%s/#pi", AliPID::ParticleLatexName(species)));
+    hMCgenToPiRatio[species]->Divide(hMCgenYield[AliPID::kPion]);
+  }
+  
+  for (Int_t species=0;species<AliPID::kSPECIES;++species) {
+    hMCgenFractions[species] = (TH1*)hMCgenYield[species]->Clone();
+    hMCgenFractions[species]->SetNameTitle(Form("hMCTruth_Fraction_%s", AliPID::ParticleShortName(species)), Form("%s Fraction", AliPID::ParticleLatexName(species)));
+    hMCgenFractions[species]->Divide(hMCgenYieldTotal);
+  }    
+
+  dataRebinned->SetRangeUser(iMCid, -1,-1,kTRUE);
+  
+  TDirectory* dirMCTruth = saveFile->mkdir("MCTruth");
+  dirMCTruth->cd();
+  
+  for (Int_t i=0;i<AliPID::kSPECIES;++i) 
+    hMCgenYield[i]->Write();
+    
+  for (Int_t i=0;i<AliPID::kSPECIES;++i) 
+    hMCgenFractions[i]->Write();
+    
+  for (Int_t i=0;i<AliPID::kSPECIES;++i) {
+    if (i == AliPID::kPion)
+      continue; 
+    
+    hMCgenToPiRatio[i]->Write();
+  }
+  
+  saveFile->cd();
   
   
   
@@ -2795,8 +2862,6 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     // Extract efficiency with GEANT-FLUKA correction
     extractEfficiencies(dataRebinned, saveFile, "_GF", iObs, genStepEff, recStepEff, restrictJetPtAxis, actualUpperJetPt, nJetsGen, nJetsRec, hYield, 
                         hEfficiencyWithGF, hEfficiencyToPiRatioWithGF, &hEfficiencyAllNoPIDWithGF);
-    
-    std::cout << hEfficiencyNoGF[2]->GetBinContent(3) << std::endl;
     
     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
       hEfficiency[species] = hEfficiencyWithGF[species];
@@ -4267,13 +4332,15 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
   TCanvas* cCorrFractions = new TCanvas("cCorrFractions", "Corrected particleFractions", 0, 300, 900, 900);
   if (iObs == kTrackPt)
     cCorrFractions->SetLogx(1);
-  hFractionCorrected[0]->GetYaxis()->SetRangeUser(0., 1.);
-  hFractionCorrected[0]->Draw("E1");
-  if (hMCgenPrimFraction[0])
-    hMCgenPrimFraction[0]->Draw("E1 same");
+  hFractionCorrected[AliPID::kPion]->GetYaxis()->SetRangeUser(0., 1.);
+  hFractionCorrected[AliPID::kPion]->Draw("E1");
+  if (hMCgenPrimFraction[AliPID::kPion])
+    hMCgenPrimFraction[AliPID::kPion]->Draw("E1 same");
   
-  for (Int_t i = 1; i < AliPID::kSPECIES; i++) {
-     
+  for (Int_t i = 0; i < AliPID::kSPECIES; i++) {
+    if (i==AliPID::kPion)
+      continue;
+    
     if (i == AliPID::kMuon && !drawMuons)
       continue;
     
@@ -4365,7 +4432,58 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     ClearTitleFromHistoInCanvas(cCorrDataToPiRatio, 2);
   }
   
+  //MC Truth
   
+  TCanvas* cCorrFractionsWithMC = (TCanvas*)cCorrFractions->Clone();
+  cCorrFractionsWithMC->SetName("cCorrFractionsWithMC");
+  cCorrFractionsWithMC->SetTitle("Corrected Fractions");
+  for (Int_t i = 1; i < AliPID::kSPECIES; i++) {
+    if ((!drawElectrons && (i == AliPID::kElectron)) || (!drawMuons && (i == AliPID::kMuon)))
+      continue; 
+    
+    hMCgenFractions[i]->Draw("E1 same");
+  }  
+  
+  cCorrFractionsWithMC->RangeAxis(0.0,0.0,2.0,1.0);
+  
+  dirMCTruth->cd();
+  cCorrFractionsWithMC->Write();
+  
+  TCanvas* cCorrDataToPiRatioWithMCTruth = new TCanvas("cCorrDataToPiRatioMCTruth", "Corrected data", 0, 300, 900, 900);
+  
+  if (iObs == kTrackPt)
+    cCorrDataToPiRatioWithMCTruth->SetLogx(1);
+
+  cCorrDataToPiRatioWithMCTruth->SetRightMargin(0.001);
+  cCorrDataToPiRatioWithMCTruth->SetLeftMargin(0.2);
+  
+  hRatioToPiCorrected[AliPID::kKaon]->GetYaxis()->SetTitleOffset(1.4);
+  hRatioToPiCorrected[AliPID::kKaon]->GetYaxis()->SetRangeUser(0, 0.7);
+  hRatioToPiCorrected[AliPID::kKaon]->Draw("E1");
+
+  for (Int_t i = 0; i < AliPID::kSPECIES; i++) {
+    if ((!drawElectrons && (i == AliPID::kElectron)) || (!drawMuons && (i == AliPID::kMuon)) || i == AliPID::kPion)
+      continue; 
+    
+    if (i != AliPID::kKaon)
+      hRatioToPiCorrected[i]->Draw("E1 same");
+  }
+  
+  cCorrDataToPiRatioWithMCTruth->BuildLegend()->SetFillColor(kWhite);
+  
+  for (Int_t i = 0; i < AliPID::kSPECIES; i++) {
+    if ((!drawElectrons && (i == AliPID::kElectron)) || (!drawMuons && (i == AliPID::kMuon)) || i == AliPID::kPion)
+      continue; 
+
+    hMCgenToPiRatio[i]->Draw("E1 same");
+    
+    if (hRatioToPiCorrectedSysError[i]) {
+      hRatioToPiCorrectedSysError[i]->GetYaxis()->SetRangeUser(0, 0.7);
+      hRatioToPiCorrectedSysError[i]->Draw("E2 same");
+    }
+  }
+  
+  cCorrDataToPiRatioWithMCTruth->Write();
   
   TH1D* hYieldCorrectedRapidity[AliPID::kSPECIES] = { 0x0, };
   TH1D* hYieldCorrectedSysErrorRapidity[AliPID::kSPECIES] = { 0x0, };

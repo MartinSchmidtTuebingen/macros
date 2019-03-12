@@ -117,7 +117,7 @@ corrMultUp=-2
 if [ "$jetLoop" = "true" ]; then
   echo "Processing Jet Loop"
   # Modes: 0=pt, 1=z, 2=xi, 3=R, 4=jT
-  for mode in R Jt #pT Z xi R Jt
+  for mode in Jt R #pT Z xi R Jt
   do
     if [ "$mode" = "pT" ];then
       iOBS=0
