@@ -2,6 +2,7 @@
 #include "TH1.h"
 #include "TCanvas.h"
 #include "TSpline.h"
+#include "TString.h"
 #include <iostream>
 
 class PieceWisePoly {
@@ -11,63 +12,86 @@ public:
   double Eval(double *x, double* p = 0x0;);
   void SetParam(Double_t* params);
   
+  Int_t GetNOfParam() const {return nOfFreeParams;};
+  
 private:
   Int_t doSmoothing;
   Int_t nParts;
   Double_t* cuts;
-  Int_t* polygrades;
-  Double_t* freeparams;
+  Int_t nOfFreeParams;
+  TF1* piecewisepolynom;
 };
 
 PieceWisePoly::PieceWisePoly(Int_t parts, Double_t* cutxvalues, Int_t* polys, Double_t* params, Int_t smooth) {
-  delete cuts;
-  cuts = new Double_t[parts-1];
-  delete polygrades;
-  polygrades = new Int_t[parts];
-  
-  for (Int_t i=0;i<parts-1;i++) 
-    cuts[i] = cutxvalues[i];
-  
-  for (Int_t i=0;i<parts;i++)
-    polygrades[i] = polys[i];
+  if (parts > 1) {
+    cuts = new Double_t[parts-1];
+    
+    for (Int_t i=0;i<parts-1;i++) 
+      cuts[i] = cutxvalues[i];
+  }
   
   doSmoothing = smooth;
   
+  TString functionString = "";
+  
+  Int_t remParts = parts;
+  Int_t 
+  while (remParts > 1) {
+    functionString += "x < " + cuts[parts-remParts] + " ? pol" + polys[parts-remParts] + "() :";
+    remParts--;
+  }
+  functionString += " pol" + polys[parts] + "()";
+  
+  
+  
+  
+  Int_t nOfFreeParams = 0;
+  for (Int_t i=0;i<parts;i++)
+    nOfFreeParams += polygrades[i];
+  
+  if (doSmoothing==1)
+    nOfFreeParams -= parts-1;
+  else if (doSmoothing==2)
+    nOfFreeParams -= 2 * (parts-1);
+  
+  if (nOfFreeParams < 1) {
+    std::cout << "Warning: Function does not have free parameters" << std::endl;
+    return;
+  }  
+  
   SetParam(params);
+  
+  
+  
 }
 
 PieceWisePoly::~PieceWisePoly() {
   delete cuts;
   cuts = 0x0;
-  delete polygrades;
-  polygrades = 0x0;
+  delete piecewisepolynom;
 }
 
 void PieceWisePoly::SetParam(Double_t* params) {
   if (!params)
     return;
   
-  Int_t nOfFreeParams = 0;
-  for (Int_t i=0;i<parts;i++)
-    nOfFreeParams += polygrades[i];
-  
-  if (smooth==1)
-    nOfFreeParams -= parts-1;
-  else if (smooth==1)
-    nOfFreeParams -= 2 * (parts-1);
-  
-  if (nOfFreeParams < 1) {
-    std::cout << "Warning: Function does not have free parameters" << std::endl;
-    return;
-  }
-  
   if (!freeparams) 
     freeparams = new Double_t[nOfFreeParams];
   
+  for (Int_t i=0;i<nOfFreeParams;++i)
+    freeparams[i] = params[i];
+  
+  return;
 }
 
 double PieceWisePoly::Eval(double* x, double* p) {
-  return (2.0*x[0]);
+  SetParam(p);
+  Double_t xx = x[0];
+  Int_t polyNumber = 0;
+  while (cuts[polyNumber] < x)
+    polyNumber++;
+  
+  return polynom[polyNumber]->Eval(xx);
 }
 
 void FitCorrFactors(TH1* h, Int_t particle = 0) {
