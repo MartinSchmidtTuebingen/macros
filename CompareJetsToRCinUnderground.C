@@ -1,12 +1,15 @@
-void CompareJetsToRCinUnderground(TString filepath, TString filename) {
+void CompareJetsToRCinUnderground(TString filename) {
   
-  TFile* f = new TFile((filepath+filename).Data(),"UPDATE");
-  gROOT->LoadMacro("/home/nqm/mschmidt/Documents/macros/GetObjectOutOfDirectory.C");
-  TH1D* jets = (TH1D*)GetObjectOutOfDirectory(f, "fh1nRecJetsCuts");
+  TObject* saveDir;
+  
+  TFile* f = new TFile(filename.Data(),"UPDATE");
+  gROOT->LoadMacro("/home/martin/Documents/macros/GetObjectOutOfDirectory.C");
+  TH1D* jets = (TH1D*)GetObjectOutOfDirectory(f, "fh1nRecJetsCuts", saveDir);
   if (!jets) {
     cout << "fh1nRecJetsCuts not found"
     return;
   }
+  
   Int_t n = jets->FindFirstBinAbove(0.0);
   TH1D* jetsNormalized = (TH1D*)(jets->Clone());
   jetsNormalized->SetNameTitle("fh1nRecJetsCuts_normalized", "fh1nRecJetsCuts_normalized");
@@ -24,9 +27,19 @@ void CompareJetsToRCinUnderground(TString filepath, TString filename) {
   TH1D* relation = (TH1D*)(jetsNormalized->Clone());
   relation->Divide(RCinUE_normalized);
   relation->SetNameTitle("fh1Relation", "fh1Relation");
-
-  jetsNormalized->Write(jetsNormalized->GetName, TObject::kOverwrite);
-  RCinUE_normalized->Write(RCinUE_normalized->GetName, TObject::kOverwrite);
-  relation->Write(relation->GetName, TObject::kOverwrite);
+  
+  cout << saveDir << endl;
+  /*
+  if (saveDir->InheritsFrom("TCollection")) {
+    TCollection* saveCollection = (TCollection*)saveDir;
+    saveCollection->Add(jetsNormalized);
+    saveCollection->Add(RCinUE_normalized);
+    saveCollection->Add(relation);
+  }
+  else {*/
+    jetsNormalized->Write(jetsNormalized->GetName(), TObject::kOverwrite);
+    RCinUE_normalized->Write(RCinUE_normalized->GetName(), TObject::kOverwrite);
+    relation->Write(relation->GetName(), TObject::kOverwrite);
+//   }
   f->Close();
 }

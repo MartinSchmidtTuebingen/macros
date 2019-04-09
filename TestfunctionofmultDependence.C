@@ -19,8 +19,8 @@ void TestfunctionofmultDependence() {
   gROOT->LoadMacro("./GetObjectOutOfDirectory.C");
   gROOT->LoadMacro("./GetObjectOutOfCanvas.C+");
   
-  TFile* f = new TFile("~/Documents/SplineCreation/LHC13c_pass4/bhess_PIDetaTree_multiplicityDependence_2018_10_30__15_37.root","READ");
-  TFile* saveFile = new TFile("~/Documents/SplineCreation/LHC13c_pass4/testpol2multDependence.root","RECREATE");  
+  TFile* f = new TFile("~/Documents/Promotion/SplineCreation/LHC15o_pass2_lowIR_MultDifferentiated/bhess_PIDetaTree_multiplicityDependence_2018_09_30__19_10.root","READ");
+  TFile* saveFile = new TFile("~/Documents/Promotion/SplineCreation/LHC15o_pass2_lowIR_MultDifferentiated/testpol2multDependence_Simple.root","RECREATE");  
   
 //   TFile* f = new TFile("~/Documents/SplineCreation/LHC15o_pass2_MultDifferentiated/bhess_PIDetaTree_multiplicityDependence_2018_09_30__19_10.root","READ");
 //   TFile* saveFile = new TFile("~/Documents/SplineCreation/LHC15o_pass2_MultDifferentiated/testpol2multDependence.root","RECREATE");
@@ -149,12 +149,11 @@ void TestfunctionofmultDependence() {
 }
 
 void FitAndSetPointsInGraph(TH1D* h, TGraphErrors* gSlvsInvOffset, TGraphErrors* gCurvvsInvOffset, Int_t pTBin, TGraphErrors* gSlvsTanTheta, TGraphErrors* gCurvvsTanTheta, Int_t ThetaBin) {
-  TFitResultPtr fitRes = h->Fit("pol2","s","",0,1500);
+  TFitResultPtr fitRes = h->Fit("pol2","s","",0,10000);
   TF1* stepfunc = new TF1("stepfunc","(x < (-[1]/(2*[2])) ? pol2(0) : [0] - [1]*[1]/(4*[2]))");
   stepfunc->SetParameter(0,fitRes->GetParams()[0]);
   stepfunc->SetParameter(1,fitRes->GetParams()[1]);
   stepfunc->SetParameter(2,fitRes->GetParams()[2]);
-//   TFitResultPtr fitRes = h->Fit("pol2","s","same",0,10000);
   TFitResultPtr fitRes = h->Fit(stepfunc,"s","same");
   if (((Int_t)fitRes) == 0) {
     Double_t p0 = fitRes->GetParams()[0];
@@ -163,10 +162,6 @@ void FitAndSetPointsInGraph(TH1D* h, TGraphErrors* gSlvsInvOffset, TGraphErrors*
     Double_t err0 = fitRes->GetErrors()[0];
     Double_t err1 = fitRes->GetErrors()[1];   
     Double_t err2 = fitRes->GetErrors()[2];
-    
-       TGraphErrors* gSlParabelvsInvOffset = new TGraphErrors(numPbins);
-    TGraphErrors* gCurvParabelvsInvOffset = new TGraphErrors(numPbins);  
-    TGraphErrors* gSigmaSlopevsInvdEdxParabel = new TGraphErrors(numPbins); 
     
     Double_t totErrorSlope = 99999;
     if (p0 != 0 && p1 != 0) {

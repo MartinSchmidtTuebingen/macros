@@ -1,5 +1,10 @@
+#include "FJ_includes.h"
+#include "AliFJWrapper.h"
+
 void Test() {
-  gSystem->AddIncludePath("-$FASTJET_ROOT/include");
-  gSystem->Load("libfastjet");
-  AliFJWrapper* wrap = new AliFJWrapper();
+//   AliFJWrapper* wrap = new AliFJWrapper();
+  TString name = "wrap1";
+  TString title = "wrap12";
+  AliFJWrapper* wrap = new AliFJWrapper(name.Data(),title.Data());
+  printf("%s",wrap->GetName());
 }

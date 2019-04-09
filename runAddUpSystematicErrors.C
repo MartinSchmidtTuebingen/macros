@@ -75,18 +75,18 @@ void runAddUpSystematicErrors(Bool_t useCentralities = kFALSE,
       jetPtString.Append(chargeString);        
       for (Int_t mode = 0; mode <= maxMode-1; mode++) {  
     
-        const Int_t numFiles = 5;
+        const Int_t numFiles = 7;
         
         TString outFileTitle = Form("SummedSystematicErrors_%s_%s__%s%s__%s", jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), date.Data());
         
         TString fileNames[numFiles];
         fileNames[0] = Form("%s/outputSystematics_%s%s_Splines%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
         fileNames[1] = Form("%s/outputSystematics_%s%s_Sigma%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
-//         fileNames[2] = Form("%s/outputSystematics_%s%s_Mult%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
-        fileNames[2] = Form("%s/outputSystematics_%s%s_Eta%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
-        fileNames[3] = Form("%s/outputSystematics_%s%s_Shape%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
-        fileNames[4] = Form("%s/outputSystematics_%s%s_PrePID%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
-//         fileNames[6] = Form("%s/outputSystematics_%s%s_Method%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data()); 
+        fileNames[2] = Form("%s/outputSystematics_%s%s_Mult%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
+        fileNames[3] = Form("%s/outputSystematics_%s%s_Eta%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
+        fileNames[4] = Form("%s/outputSystematics_%s%s_Shape%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
+        fileNames[5] = Form("%s/outputSystematics_%s%s_PrePID%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data());
+        fileNames[6] = Form("%s/outputSystematics_%s%s_Method%s%s%s__%s.root", path.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data(), sigmaString.Data(), date.Data()); 
 
         TString fileNameReference = Form("%s/maschmid_PID_%sresults_LLFit__%s_2_reg1_regFac1.00_noMuons_idSpectra%s%s.root", referencepath.Data(), jetString.Data(), modeString[mode].Data(), centralityString.Data(), jetPtString.Data());
         

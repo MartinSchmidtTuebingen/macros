@@ -186,8 +186,8 @@ void runSystematicErrorEstimation(TString jetString = "", TString chargeString =
 
           TString histTitles[numFiles];
           histTitles[0] = "Standard #sigma map";
-          histTitles[1] = "#sigma correction - 4%";
-          histTitles[2] = "#sigma correction + 4%";
+          histTitles[1] = "#sigma correction - 3%";
+          histTitles[2] = "#sigma correction + 3%";
           
           outFileTitle = Form("%s%s_%s", jetString.Data(), modeString[mode].Data(), outFileTitle.Data());
           SystematicErrorEstimation(outfilepath, outFileTitle, fileNames, histTitles, numFiles, nSigma, ignoreSigmaErrors, setMean, setMeanLowerThreshold,setMeanUpperThreshold);  

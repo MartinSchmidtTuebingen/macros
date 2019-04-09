@@ -4267,13 +4267,15 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
   TCanvas* cCorrFractions = new TCanvas("cCorrFractions", "Corrected particleFractions", 0, 300, 900, 900);
   if (iObs == kTrackPt)
     cCorrFractions->SetLogx(1);
-  hFractionCorrected[0]->GetYaxis()->SetRangeUser(0., 1.);
-  hFractionCorrected[0]->Draw("E1");
-  if (hMCgenPrimFraction[0])
-    hMCgenPrimFraction[0]->Draw("E1 same");
+  hFractionCorrected[AliPID::kPion]->GetYaxis()->SetRangeUser(0., 1.);
+  hFractionCorrected[AliPID::kPion]->Draw("E1");
+  if (hMCgenPrimFraction[AliPID::kPion])
+    hMCgenPrimFraction[AliPID::kPion]->Draw("E1 same");
   
-  for (Int_t i = 1; i < AliPID::kSPECIES; i++) {
-     
+  for (Int_t i = 0; i < AliPID::kSPECIES; i++) {
+    if (i==AliPID::kPion)
+      continue;
+    
     if (i == AliPID::kMuon && !drawMuons)
       continue;
     

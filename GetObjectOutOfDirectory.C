@@ -1,5 +1,10 @@
 TObject* GetObjectOutOfCollection(TCollection* coll, TString objectName);
 
+TObject* GetObjectOutOfDirectory(TString fileName, TString objectName) {
+  TFile* f = new TFile(fileName.Data());
+  return GetObjectOutOfDirectory(f,objectName);
+}
+
 TObject* GetObjectOutOfDirectory(TDirectoryFile* d, TString objectName) {
   if (!d || d->IsZombie())
     return 0x0;
@@ -46,6 +51,5 @@ TObject *GetObjectOutOfCollection(TCollection* coll, TString objectName) {
       collobj = it();
     }
   }
-  
   return obj;
 }
