@@ -1376,7 +1376,7 @@ Bool_t extractEfficiencies(AliCFContainer* data, TFile* saveFile, TString suffix
     AliCFEffGrid* effSingleTrack = new AliCFEffGrid(Form("effSingleTrack%s", suffixGF.Data()), "Efficiency x Acceptance",
                                                     *dataForSingleTrackEff);
     
-    effSingleTrack->CalculateEfficiency(kStepRecWithRecCutsPrimaries, genStepEff);
+    effSingleTrack->CalculateEfficiency(kStepRecWithRecCutsMeasuredObsPrimaries, genStepEff);
     
     // If the jet axis is restricted (i.e. jet input), scale with the corresponding number of jets.
     // Note: Since this is supposed to be a real scaling, set the error of the scale factor to zero

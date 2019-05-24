@@ -14,6 +14,7 @@ folder_for_macros=~/Documents/macros
 
 source ali master
 
+
 date=$2
 charge=0
 #charge=$3
@@ -29,9 +30,8 @@ if [ "x$charge" = "x1" ]; then
 fi
 
 #Calculate errors, exclude multiplicity-dependent errors
-sysErrTypeMC=6
 # sysErrTypeMC=6  #For Merging without MultDep
-# sysErrTypeMC=4  #For Merging
+sysErrTypeMC=4  #For Merging
 
 pathData=$3
 
@@ -79,15 +79,13 @@ stringArgs3="1.,0,kFALSE"
 stringArgs3MB="1.,$sysErrTypeMC,kTRUE"
 # stringArgs3MB="1.,0,kTRUE"
 
-
-
 dateString=""
 if [ "$date" = "" ]; then
   if [ $jetLoop = "true" ]; then
     filename1="maschmid_PID_Jets_PureGauss_results_LLFit__"
     filename2="2_reg1_regFac1.00_noMuons_idSpectra"
   else
-    filename="maschmid_PID_Jets_PureGauss_results_LLFit__Pt_2_reg1_regFac1.00_noMuons_idSpectra_centrality60_100";
+    filename1="maschmid_PID_Jets_Inclusive_PureGauss_results_LLFit__Pt_2_reg1_regFac1.00_noMuons_idSpectra"
   fi  
   echo "No sys errors";
 else
@@ -105,6 +103,8 @@ else
   echo "With sys errors";
 fi
 
+# echo "filename1 hardcoded"
+# filename1="maschmid_PID_Jets_Inclusive_PureGauss_results_LLFit__Pt_2_reg1_regFac1.00_noMuons_idSpectra"
 
 # With fixed centrality range for corr factors
 corrMultLow=-2
@@ -117,11 +117,11 @@ corrMultUp=-2
 if [ "$jetLoop" = "true" ]; then
   echo "Processing Jet Loop"
   # Modes: 0=pt, 1=z, 2=xi, 3=R, 4=jT
-  for mode in Jt R #pT Z xi R Jt
+  for mode in Pt #Pt Z xi R Jt
   do
-    if [ "$mode" = "pT" ];then
+    if [ "$mode" = "Pt" ];then
       iOBS=0
-    elif [ "$mode" = "z" ];then
+    elif [ "$mode" = "Z" ];then
       iOBS=1
     elif [ "$mode" = "xi" ];then
       iOBS=2
@@ -130,7 +130,7 @@ if [ "$jetLoop" = "true" ]; then
     elif [ "$mode" = "Jt" ];then
       iOBS=4
     fi
-    for jetPtString in 10.0_15.0 15.0_20.0 20.0_30.0
+    for jetPtString in 5.0_10.0 #10.0_15.0 15.0_20.0 20.0_30.0
     do
       if [ "$jetPtString" = "5.0_10.0" ];then
         lowerJetPt=5.0
@@ -170,10 +170,10 @@ else
       filename=$filename1"Pt_"$9"$centString"_$nSigmaString$chargeString$dateString.root
     fi  
   else
-    filename=$filename1""_Pt__$centString""$chargeString$dateString.root
+    filename=$filename1"_Pt__"$centString""$chargeString$dateString.root
   fi  
   if [ ! -f $pathData/$filename ];then
-    echo "File $pathData/$filename not found"
+    echo "Inclusive File $pathData/$filename not found"
   else  
     aliroot $folder_for_macros/calcEfficiency.C+"(\"$fileEfficiency\",\"$pathData/$filename\", \"$pathSysErr\",$stringArgs1,$stringCent,-1,-1,0,0,$stringArgs2,$1,$stringArgs3MB)" -l -b -q
   fi
