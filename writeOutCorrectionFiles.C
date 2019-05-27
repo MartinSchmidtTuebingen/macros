@@ -1,6 +1,7 @@
 #include "TFile.h"
 #include "AliCFContainer.h"
 #include "AliPID.h"
+#include "TH2.h"
 
 #include "THnSparseDefinitions.h"
 
@@ -20,7 +21,7 @@ Int_t ijT = 0;
 
 Int_t iObsAxis = 0;
 
-Int_t writeOutCorrectionFiles(TString effFile, TString pathNameData, TString outfilepath, TString addoutFileName) {
+Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addoutFileName) {
   TFile* fileEff = new TFile(effFile.Data());
   if (!fileEff) {
     printf("Failed to open efficiency file \"%s\"\n", effFile.Data());
@@ -32,9 +33,6 @@ Int_t writeOutCorrectionFiles(TString effFile, TString pathNameData, TString out
     printf("Failed to load efficiency container!\n");
     return -1;
   }  
-  
-  Int_t nOfJetBins = 4;
-  Double_t jetBinLimits[2*nOfJetBins] = {5.0,10.0,10.0,15.0,15.0,20.0,20.0,30.0};
   
   Int_t nOfEffSteps = 2;
   EffSteps usedEffSteps[nOfEffSteps] = {kStepGenWithGenCuts, kStepRecWithRecCutsPrimaries};
@@ -55,7 +53,7 @@ Int_t writeOutCorrectionFiles(TString effFile, TString pathNameData, TString out
     }
   }
   
-//   AliPID::ParticleName(species)
+//   AliPID::ParticleShortName(species)
   
   iPt     = data->GetVar(Form("%s_{T} (GeV/c)", momentumString.Data()));
   iMCid   = data->GetVar("MC ID");
@@ -72,23 +70,72 @@ Int_t writeOutCorrectionFiles(TString effFile, TString pathNameData, TString out
   iXi    = data->GetVar(Form("#xi = ln(%s_{T}^{jet} / %s_{T}^{track})", momentumString.Data(), momentumString.Data()));
   iDistance = data->GetVar("R");
   ijT = data->GetVar("j_{T} (GeV/c)");  
- 
   
-  TFile* outFile = new TFile((outfilepath + TString("/outCorrections_PythiaFastJet_") + addoutFileName + TString(".root")).Data());
-//   outFile->mkdir(
-//   
-//   Int_t lowerJetPtBinLimit = -1;
-//   Int_t upperJetPtBinLimit = -2;
-//   Bool_t restrictJetPtAxis = kFALSE;
-//   Double_t actualLowerJetPt = -1.;
-//   Double_t actualUpperJetPt = -1.;
-//   
-//   if (lowerJetPt >= 0 && upperJetPt >= 0) {
-//     // Add subtract a very small number to avoid problems with values right on the border between to bins
-//     lowerJetPtBinLimit = dataRebinned->GetAxis(iJetPt, 0)->FindFixBin(lowerJetPt + 0.001);
-//     upperJetPtBinLimit = dataRebinned->GetAxis(iJetPt, 0)->FindFixBin(upperJetPt - 0.001);
-//   }
+  Int_t nOfTrackObservables = 1;
+  Int_t trackObservableBins[nOfTrackObservables] = {iPt};
+  TString observableNames[nOfTrackObservables] = {"TrackPt"};
   
+  //Setting jet limits and getting the number of rec/gen jets from the file associated with the efficiency file
+  Int_t nOfJetBins = 4;
+  Double_t jetPtLimits[2*nOfJetBins] = {5.0,10.0,10.0,15.0,15.0,20.0,20.0,30.0};
+  Int_t nOfJets[2][nOfJetBins] = {0};
+  Int_t jetBinLimits[2*nOfJetBins] = {0};
   
+  TString pathNameDataMC = effFile;
+  pathNameDataMC.ReplaceAll("_efficiency", "");
   
+  TFile* fDataMC = TFile::Open(pathNameDataMC.Data());
+  if (!fDataMC)  {
+    std::cout << std::endl;
+    std::cout << "Failed to open file \"" << pathNameDataMC.Data() << "\" to obtain num of rec/gen jets!" << std::endl;   
+    return -1;
+  }
+  
+  TString listName = pathNameDataMC;
+  listName.Replace(0, listName.Last('/') + 1, "");
+  listName.ReplaceAll(".root", "");
+    
+  TObjArray* histList = (TObjArray*)(fDataMC->Get(listName.Data()));
+  if (!histList) {
+    std::cout << std::endl;
+    std::cout << "Failed to load list \"" << listName.Data() << "\" to obtain num of rec/gen jets!" << std::endl;
+    return -1;
+  }    
+  
+  TH2* hNjetsGen = (TH2D*)histList->FindObject("fh2FFJetPtGen");
+  TH2* hNjetsRec = (TH2D*)histList->FindObject("fh2FFJetPtRec");
+  
+  Int_t lowerCentralityBinLimit = -1;
+  Int_t upperCentralityBinLimit = -1;
+
+  for (Int_t i=0;i<nOfJetBins;++i) {
+    jetBinLimits[2*i] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i] + 0.001);
+    jetBinLimits[2*i+1] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i+1] - 0.001);   
+    
+    nOfJets[0][i] = hNjetsGen ? hNjetsGen->Integral(lowerCentralityBinLimit, upperCentralityBinLimit, jetBinLimits[2*i], jetBinLimits[2*i+1]) : 1.;
+    nOfJets[1][i] = hNjetsRec ? hNjetsRec->Integral(lowerCentralityBinLimit, upperCentralityBinLimit, jetBinLimits[2*i], jetBinLimits[2*i+1]) : 1.;
+  }
+  
+  TFile* outFile = new TFile((outfilepath + TString("/outCorrections_PythiaFastJet_") + addoutFileName + TString(".root")).Data(),"RECREATE");
+  
+  for (Int_t species=-1;species<AliPID::kSPECIES;++species) {
+    for (Int_t effStep=0;effStep<nOfEffSteps;++effStep) {
+      TString dirName = dirNameEffSteps[effStep] + (species >= 0 ? (TString("_") + TString(AliPID::ParticleShortName(species))) : TString(""));
+      outFile->mkdir(dirName.Data());
+      outFile->cd(dirName.Data());
+      for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
+        for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
+          data->SetRangeUser(iMCid,species,species,kTRUE);
+          data->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
+          TH1* h = data->Project(usedEffSteps[effStep],trackObservableBins[observable]);
+          h->SetNameTitle(TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable],dirNameEffSteps[effStep],(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
+          h->Scale(1.0/nOfJets[TMath::Min(effStep,1)][jetPtStep]);
+          h->Write();
+        }
+      }
+    }
+  }
+  fileEff->Close();
+  outFile->Close();
+  return 0;
 }
