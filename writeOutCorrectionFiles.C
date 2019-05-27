@@ -34,7 +34,7 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
     return -1;
   }  
   
-  Int_t nOfEffSteps = 2;
+  const Int_t nOfEffSteps = 2;
   EffSteps usedEffSteps[nOfEffSteps] = {kStepGenWithGenCuts, kStepRecWithRecCutsPrimaries};
   TString dirNameEffSteps[nOfEffSteps] = {"Gen", "RecCuts"};
   
@@ -71,12 +71,12 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
   iDistance = data->GetVar("R");
   ijT = data->GetVar("j_{T} (GeV/c)");  
   
-  Int_t nOfTrackObservables = 1;
-  Int_t trackObservableBins[nOfTrackObservables] = {iPt};
-  TString observableNames[nOfTrackObservables] = {"TrackPt"};
+  const Int_t nOfTrackObservables = 4;
+  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ, iDistance, ijT};
+  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z", "R", "jT"};
   
   //Setting jet limits and getting the number of rec/gen jets from the file associated with the efficiency file
-  Int_t nOfJetBins = 4;
+  const Int_t nOfJetBins = 4;
   Double_t jetPtLimits[2*nOfJetBins] = {5.0,10.0,10.0,15.0,15.0,20.0,20.0,30.0};
   Int_t nOfJets[2][nOfJetBins] = {0};
   Int_t jetBinLimits[2*nOfJetBins] = {0};
@@ -119,17 +119,21 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
   TFile* outFile = new TFile((outfilepath + TString("/outCorrections_PythiaFastJet_") + addoutFileName + TString(".root")).Data(),"RECREATE");
   
   for (Int_t species=-1;species<AliPID::kSPECIES;++species) {
+    data->SetRangeUser(iMCid,species+1,species+1,kTRUE);
     for (Int_t effStep=0;effStep<nOfEffSteps;++effStep) {
       TString dirName = dirNameEffSteps[effStep] + (species >= 0 ? (TString("_") + TString(AliPID::ParticleShortName(species))) : TString(""));
       outFile->mkdir(dirName.Data());
       outFile->cd(dirName.Data());
       for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
+        data->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
         for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
-          data->SetRangeUser(iMCid,species,species,kTRUE);
-          data->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
           TH1* h = data->Project(usedEffSteps[effStep],trackObservableBins[observable]);
-          h->SetNameTitle(TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable],dirNameEffSteps[effStep],(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
+          h->SetNameTitle(TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable].Data(),dirNameEffSteps[effStep].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
           h->Scale(1.0/nOfJets[TMath::Min(effStep,1)][jetPtStep]);
+          
+          for (Int_t binNumber = 0;binNumber<=h->GetNbinsX();binNumber++) 
+            h->SetBinContent(binNumber,h->GetBinContent(binNumber)/h->GetBinWidth(binNumber));
+            
           h->Write();
         }
       }
