@@ -2796,8 +2796,6 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     extractEfficiencies(dataRebinned, saveFile, "_GF", iObs, genStepEff, recStepEff, restrictJetPtAxis, actualUpperJetPt, nJetsGen, nJetsRec, hYield, 
                         hEfficiencyWithGF, hEfficiencyToPiRatioWithGF, &hEfficiencyAllNoPIDWithGF);
     
-    std::cout << hEfficiencyNoGF[2]->GetBinContent(3) << std::endl;
-    
     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
       hEfficiency[species] = hEfficiencyWithGF[species];
       hEfficiencyToPiRatio[species] = hEfficiencyToPiRatioWithGF[species];

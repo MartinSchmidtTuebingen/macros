@@ -60,24 +60,19 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
   iEta    = data->GetVar("#eta");
   iCharge = data->GetVar("Charge (e_{0})");
   iMult   = data->GetVar("Centrality Percentile");
-  // Will be set later, if jet pT is restricted
-  iJetPt  = 0;
-  iZ = 0;
-  iXi = 0;  
-  
   iJetPt = data->GetVar(Form("%s_{T}^{jet} (GeV/c)", momentumString.Data()));
   iZ     = data->GetVar(Form("z = %s_{T}^{track} / %s_{T}^{jet}", momentumString.Data(), momentumString.Data()));
   iXi    = data->GetVar(Form("#xi = ln(%s_{T}^{jet} / %s_{T}^{track})", momentumString.Data(), momentumString.Data()));
   iDistance = data->GetVar("R");
   ijT = data->GetVar("j_{T} (GeV/c)");  
   
-  const Int_t nOfTrackObservables = 4;
-  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ, iDistance, ijT};
-  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z", "R", "jT"};
+  const Int_t nOfTrackObservables = 5;
+  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ, iXi, iDistance, ijT};
+  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z", "Xi", "R", "jT"};
   
   //Setting jet limits and getting the number of rec/gen jets from the file associated with the efficiency file
-  const Int_t nOfJetBins = 4;
-  Double_t jetPtLimits[2*nOfJetBins] = {5.0,10.0,10.0,15.0,15.0,20.0,20.0,30.0};
+  const Int_t nOfJetBins = 5;
+  Double_t jetPtLimits[2*nOfJetBins] = {5.0,10.0,10.0,15.0,15.0,20.0,20.0,30.0,30.0,80.0};
   Int_t nOfJets[2][nOfJetBins] = {0};
   Int_t jetBinLimits[2*nOfJetBins] = {0};
   
@@ -119,16 +114,17 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
   TFile* outFile = new TFile((outfilepath + TString("/outCorrections_PythiaFastJet_") + addoutFileName + TString(".root")).Data(),"RECREATE");
   
   for (Int_t species=-1;species<AliPID::kSPECIES;++species) {
+    TString speciesString = species >= 0 ? (TString("_") + TString(AliPID::ParticleShortName(species))) : TString("");
     data->SetRangeUser(iMCid,species+1,species+1,kTRUE);
     for (Int_t effStep=0;effStep<nOfEffSteps;++effStep) {
-      TString dirName = dirNameEffSteps[effStep] + (species >= 0 ? (TString("_") + TString(AliPID::ParticleShortName(species))) : TString(""));
+      TString dirName = dirNameEffSteps[effStep] + speciesString;
       outFile->mkdir(dirName.Data());
       outFile->cd(dirName.Data());
       for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
         data->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
         for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
           TH1* h = data->Project(usedEffSteps[effStep],trackObservableBins[observable]);
-          h->SetNameTitle(TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable].Data(),dirNameEffSteps[effStep].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
+          h->SetNameTitle(TString::Format("fh1FF%s%s%s_%02d_%02d",observableNames[observable].Data(),dirNameEffSteps[effStep].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
           h->Scale(1.0/nOfJets[TMath::Min(effStep,1)][jetPtStep]);
           
           for (Int_t binNumber = 0;binNumber<=h->GetNbinsX();binNumber++) 
