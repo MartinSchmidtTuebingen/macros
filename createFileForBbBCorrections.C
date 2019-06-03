@@ -1,7 +1,6 @@
 #include "TH3.h"
 #include "./calcEfficiency.C"
 
-
 Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileName) {
   TFile* fileEff = TFile::Open(pathNameEfficiency.Data());
   if (!fileEff) {
@@ -14,8 +13,6 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     printf("Failed to load efficiency container!\n");
     return -1;
   }  
-  
-//   geantFlukaCorrection(data, kStepGenWithGenCuts, kStepRecWithRecCutsMeasuredObsPrimaries, kFALSE);
   
   // For backward compatibility:
   // Check whether "P_{T}" or "p_{T}" is used
@@ -32,16 +29,17 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     }
   }
   
-  Int_t iPt     = data->GetVar(Form("%s_{T} (GeV/c)", momentumString.Data()));
-  Int_t iMCid   = data->GetVar("MC ID");
-  Int_t iEta    = data->GetVar("#eta");
-  Int_t iCharge = data->GetVar("Charge (e_{0})");
-  Int_t iMult   = data->GetVar("Centrality Percentile");
-  Int_t iJetPt = data->GetVar(Form("%s_{T}^{jet} (GeV/c)", momentumString.Data()));
-  Int_t iZ     = data->GetVar(Form("z = %s_{T}^{track} / %s_{T}^{jet}", momentumString.Data(), momentumString.Data()));
-  Int_t iXi    = data->GetVar(Form("#xi = ln(%s_{T}^{jet} / %s_{T}^{track})", momentumString.Data(), momentumString.Data()));
-  Int_t iDistance = data->GetVar("R");
-  Int_t ijT = data->GetVar("j_{T} (GeV/c)");
+  //Variables all defined in calcEfficiency.C
+  iPt     = data->GetVar(Form("%s_{T} (GeV/c)", momentumString.Data()));
+  iMCid   = data->GetVar("MC ID");
+  iEta    = data->GetVar("#eta");
+  iCharge = data->GetVar("Charge (e_{0})");
+  iMult   = data->GetVar("Centrality Percentile");
+  iJetPt = data->GetVar(Form("%s_{T}^{jet} (GeV/c)", momentumString.Data()));
+  iZ     = data->GetVar(Form("z = %s_{T}^{track} / %s_{T}^{jet}", momentumString.Data(), momentumString.Data()));
+  iXi    = data->GetVar(Form("#xi = ln(%s_{T}^{jet} / %s_{T}^{track})", momentumString.Data(), momentumString.Data()));
+  iDistance = data->GetVar("R");
+  ijT = data->GetVar("j_{T} (GeV/c)");
   
   const Int_t nOfTrackObservables = 2;
   Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ};//, iXi, iDistance, ijT};
@@ -102,6 +100,8 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     jetBinLimits[2*i+1] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i+1] - 0.001);      
   }
   
+  geantFlukaCorrection(data, kStepGenWithGenCuts, kStepRecWithRecCutsMeasuredObsPrimaries, kFALSE);
+  
   TFile* outFile = new TFile(outfileName.Data(),"RECREATE");
   
   for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
@@ -115,10 +115,20 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     eff->GetDen()->Scale(factor_Denominator);
     
     for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
-      TH1* h = eff->Project(trackObservableBins[observable]);
-      h->SetNameTitle(TString::Format("hBbBCorr%s_%02d_%02d",observableNames[observable].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");        
-      h->Write();
-      delete h;
+      TH1* hEff = eff->Project(trackObservableBins[observable]);
+      hEff->SetNameTitle(TString::Format("hBbBCorr%s_%02d_%02d",observableNames[observable].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");  
+      for (Int_t bin=1;bin<=hEff->GetNbinsX();++bin) {
+        const Double_t eff = hEff->GetBinContent(bin);
+        const Double_t effErr = hEff->GetBinError(bin);
+        
+        const Double_t effBbB = eff > 0. ? 1. / eff : 0.;
+        const Double_t effBbBErr = eff > 0. ? effErr / (eff * eff) : 0.;
+        
+        hEff->SetBinContent(bin, effBbB);
+        hEff->SetBinError(bin, effBbBErr);        
+      }
+      hEff->Write();
+      delete hEff;
     }
     delete eff;
     delete dataRebinned;    
@@ -139,7 +149,17 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
       for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {        
         TH1* hEff = (TH1*)eff->Project(trackObservableBins[observable]);  
         TString hName = TString::Format("hBbBCorr%s%s_%02d_%02d",observableNames[observable].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2], (Int_t)jetPtLimits[jetPtStep*2+1]);   
-        hEff->SetNameTitle(hName.Data(),"");   
+        hEff->SetNameTitle(hName.Data(),"");  
+        for (Int_t bin=1;bin<=hEff->GetNbinsX();++bin) {
+          const Double_t eff = hEff->GetBinContent(bin);
+          const Double_t effErr = hEff->GetBinError(bin);
+          
+          const Double_t effBbB = eff > 0. ? 1. / eff : 0.;
+          const Double_t effBbBErr = eff > 0. ? effErr / (eff * eff) : 0.;
+          
+          hEff->SetBinContent(bin, effBbB);
+          hEff->SetBinError(bin, effBbBErr);        
+        }      
         hEff->Write();
         delete hEff;
       }
