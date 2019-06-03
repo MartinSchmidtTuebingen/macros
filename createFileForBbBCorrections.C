@@ -103,17 +103,33 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
   }
   
   TFile* outFile = new TFile(outfileName.Data(),"RECREATE");
-    
-  for (Int_t species=-1;species<AliPID::kSPECIES;++species) {
-    TString speciesString = "";
-    Int_t speciesBin = species;
-    if (species >=0) {
-      speciesString = TString("_") + TString(AliPID::ParticleShortName(species));
-      speciesBin = species+1; 
-    }
   
+  for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
+    AliCFContainer *dataRebinned = new AliCFContainer(*data);
+    dataRebinned->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
+    Double_t factor_Numerator[2] = { nOfJets[1][jetPtStep] > 0 ? 1. / nOfJets[1][jetPtStep] : 0., 0.  };
+    Double_t factor_Denominator[2] = { nOfJets[0][jetPtStep] > 0 ? 1. / nOfJets[0][jetPtStep] : 0., 0.  };
+    AliCFEffGrid* eff = new AliCFEffGrid("eff", "Efficiency x Acceptance x pT Resolution", *dataRebinned);
+    eff->CalculateEfficiency(kStepRecWithRecCutsMeasuredObsPrimaries, kStepGenWithGenCuts);    
+    eff->GetNum()->Scale(factor_Numerator);
+    eff->GetDen()->Scale(factor_Denominator);
+    
+    for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
+      TH1* h = eff->Project(trackObservableBins[observable]);
+      h->SetNameTitle(TString::Format("hBbBCorr%s_%02d_%02d",observableNames[observable].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");        
+      h->Write();
+      delete h;
+    }
+    delete eff;
+    delete dataRebinned;    
+  }  
+    
+  for (Int_t species=0;species<AliPID::kSPECIES;++species) {
+    TString speciesString = TString("_") + TString(AliPID::ParticleShortName(species));
     for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
       AliCFContainer *dataRebinned = new AliCFContainer(*data);
+      dataRebinned->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
+      dataRebinned->SetRangeUser(iMCid,species+1,species+1,kTRUE);
       Double_t factor_Numerator[2] = { nOfJets[1][jetPtStep] > 0 ? 1. / nOfJets[1][jetPtStep] : 0., 0.  };
       Double_t factor_Denominator[2] = { nOfJets[0][jetPtStep] > 0 ? 1. / nOfJets[0][jetPtStep] : 0., 0.  };
       AliCFEffGrid* eff = new AliCFEffGrid("eff", "Efficiency x Acceptance x pT Resolution", *dataRebinned);
@@ -121,12 +137,11 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
       eff->GetNum()->Scale(factor_Numerator);
       eff->GetDen()->Scale(factor_Denominator);
       for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {        
-        TH3* hEffAll3D = (TH3*)eff->Project(trackObservableBins[observable],iJetPt,iMCid);  
-        TString hName = TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2], (Int_t)jetPtLimits[jetPtStep*2+1]);
-        TH1D* hEffSpecies = hEffAll3D->ProjectionX(hName.Data(),jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],speciesBin,speciesBin);          
-        hEffSpecies->Write();
-        delete hEffAll3D;
-        delete hEffSpecies;
+        TH1* hEff = (TH1*)eff->Project(trackObservableBins[observable]);  
+        TString hName = TString::Format("hBbBCorr%s%s_%02d_%02d",observableNames[observable].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2], (Int_t)jetPtLimits[jetPtStep*2+1]);   
+        hEff->SetNameTitle(hName.Data(),"");   
+        hEff->Write();
+        delete hEff;
       }
       delete eff;
       delete dataRebinned;
