@@ -1443,6 +1443,7 @@ Bool_t extractEfficiencies(AliCFContainer* data, TFile* saveFile, TString suffix
   // If the jet axis is restricted (i.e. jet input), scale with the corresponding number of jets.
   // Note: Since this is supposed to be a real scaling, set the error of the scale factor to zero
   // (second element of factor array)
+
   if (restrictJetPtAxis) {
     Double_t factor_Numerator[2] = { nJetsRec > 0 ? 1. / nJetsRec : 0., 0.  };
     Double_t factor_Denominator[2] = { nJetsGen > 0 ? 1. / nJetsGen : 0., 0.  };

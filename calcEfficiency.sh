@@ -117,7 +117,7 @@ corrMultUp=-2
 if [ "$jetLoop" = "true" ]; then
   echo "Processing Jet Loop"
   # Modes: 0=pt, 1=z, 2=xi, 3=R, 4=jT
-  for mode in Pt #Pt Z xi R Jt
+  for mode in Z #Pt Z xi R Jt
   do
     if [ "$mode" = "Pt" ];then
       iOBS=0
@@ -130,7 +130,7 @@ if [ "$jetLoop" = "true" ]; then
     elif [ "$mode" = "Jt" ];then
       iOBS=4
     fi
-    for jetPtString in 5.0_10.0 #10.0_15.0 15.0_20.0 20.0_30.0
+    for jetPtString in 5.0_10.0 10.0_15.0 15.0_20.0 20.0_30.0
     do
       if [ "$jetPtString" = "5.0_10.0" ];then
         lowerJetPt=5.0
@@ -178,23 +178,3 @@ else
     aliroot $folder_for_macros/calcEfficiency.C+"(\"$fileEfficiency\",\"$pathData/$filename\", \"$pathSysErr\",$stringArgs1,$stringCent,-1,-1,0,0,$stringArgs2,$1,$stringArgs3MB)" -l -b -q
   fi
 fi  
-
-
-
-
-
-
-
-#   filename="$filename1"Pt_2"$filename2"
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt5.0_10.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt10.0_15.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt15.0_20.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt20.0_30.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q 
-#   filename="$filename1"Z_2"$filename2"
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt5.0_10.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt10.0_15.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt15.0_20.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename'_jetPt20.0_30.0'$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q   
-# else
-#   aliroot 'calcEfficiency.C+("'$fileEfficiency'","'$pathData'/'$filename$chargeString$dateString'.root","'$pathSysErr'",'"$stringArgs1"','"$stringCent"','"$stringArgs2"','$1','"$stringArgs3MB"',kFALSE)' -l -b -q
-# fi
