@@ -1,3 +1,4 @@
+#include "TH3.h"
 #include "./calcEfficiency.C"
 
 
@@ -14,10 +15,7 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     return -1;
   }  
   
-  geantFlukaCorrection(data, kStepGenWithGenCuts, kStepRecWithRecCutsMeasuredObsPrimaries, kFALSE);
-  
-  AliCFEffGrid* eff = new AliCFEffGrid("eff", "Efficiency x Acceptance x pT Resolution", *data);
-  eff->CalculateEfficiency(kStepRecWithRecCutsMeasuredObsPrimaries, kStepGenWithGenCuts);
+//   geantFlukaCorrection(data, kStepGenWithGenCuts, kStepRecWithRecCutsMeasuredObsPrimaries, kFALSE);
   
   // For backward compatibility:
   // Check whether "P_{T}" or "p_{T}" is used
@@ -45,9 +43,9 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
   Int_t iDistance = data->GetVar("R");
   Int_t ijT = data->GetVar("j_{T} (GeV/c)");
   
-  const Int_t nOfTrackObservables = 5;
-  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ, iXi, iDistance, ijT};
-  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z", "Xi", "R", "jT"};  
+  const Int_t nOfTrackObservables = 2;
+  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ};//, iXi, iDistance, ijT};
+  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z"};//, "Xi", "R", "jT"};  
   
   //Setting jet limits and getting the number of rec/gen jets from the file associated with the efficiency file
   const Int_t nOfJetBins = 5;
@@ -79,64 +77,64 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
   TH2* hNjetsGen = (TH2D*)histList->FindObject("fh2FFJetPtGen");
   TH2* hNjetsRec = (TH2D*)histList->FindObject("fh2FFJetPtRec");
   
+   // If desired, restrict centrality axis
+  Int_t lowerCentrality = 0;
+  Int_t upperCentrality = 100;
   Int_t lowerCentralityBinLimit = -1;
-  Int_t upperCentralityBinLimit = -1;
+  Int_t upperCentralityBinLimit = -2; // Integral(lowerCentBinLimit, uppCentBinLimit) will not be restricted if these values are kept. In particular, under- and overflow bin will be used!
+  
+  if (lowerCentrality >= -1 && upperCentrality >= -1) {
+    // Add subtract a very small number to avoid problems with values right on the border between two bins
+    lowerCentralityBinLimit = data->GetAxis(iMult, 0)->FindFixBin(lowerCentrality + 0.001);
+    upperCentralityBinLimit = data->GetAxis(iMult, 0)->FindFixBin(upperCentrality - 0.001);
+  }
 
-  for (Int_t i=0;i<nOfJetBins;++i) {
-    jetBinLimits[2*i] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i] + 0.001);
-    jetBinLimits[2*i+1] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i+1] - 0.001);   
-    
+  data->SetRangeUser(iMult, lowerCentralityBinLimit, upperCentralityBinLimit, kTRUE);
+  
+  for (Int_t i=0;i<nOfJetBins;++i) { 
+    jetBinLimits[2*i] = hNjetsRec->GetYaxis()->FindFixBin(jetPtLimits[2*i] + 0.001);
+    jetBinLimits[2*i+1] = hNjetsRec->GetYaxis()->FindFixBin(jetPtLimits[2*i+1] - 0.001);  
+
     nOfJets[0][i] = hNjetsGen ? hNjetsGen->Integral(lowerCentralityBinLimit, upperCentralityBinLimit, jetBinLimits[2*i], jetBinLimits[2*i+1]) : 1.;
     nOfJets[1][i] = hNjetsRec ? hNjetsRec->Integral(lowerCentralityBinLimit, upperCentralityBinLimit, jetBinLimits[2*i], jetBinLimits[2*i+1]) : 1.;
+
+    jetBinLimits[2*i] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i] + 0.001);
+    jetBinLimits[2*i+1] = data->GetAxis(iJetPt, 0)->FindFixBin(jetPtLimits[2*i+1] - 0.001);      
   }
   
   TFile* outFile = new TFile(outfileName.Data(),"RECREATE");
+    
+  for (Int_t species=-1;species<AliPID::kSPECIES;++species) {
+    TString speciesString = "";
+    Int_t speciesBin = species;
+    if (species >=0) {
+      speciesString = TString("_") + TString(AliPID::ParticleShortName(species));
+      speciesBin = species+1; 
+    }
   
-  for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
-    
-  Double_t factor_Numerator[2] = { nOfJets[1][jetPtStep] > 0 ? 1. / nOfJets[1][jetPtStep] : 0., 0.  };
-  Double_t factor_Denominator[2] = { nOfJets[0][jetPtStep] > 0 ? 1. / nOfJets[0][jetPtStep] : 0., 0.  };
-  eff->GetNum()->Scale(factor_Numerator);
-  eff->GetDen()->Scale(factor_Denominator);
-    
-    for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
-      
-      TH1* h = eff->Project(trackObservableBins[observable]);
-      h->SetNameTitle(TString::Format("hBbBCorr%s_%02d_%02d",observableNames[observable].Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
-        
-      h->Write();
+    for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
+      AliCFContainer *dataRebinned = new AliCFContainer(*data);
+      Double_t factor_Numerator[2] = { nOfJets[1][jetPtStep] > 0 ? 1. / nOfJets[1][jetPtStep] : 0., 0.  };
+      Double_t factor_Denominator[2] = { nOfJets[0][jetPtStep] > 0 ? 1. / nOfJets[0][jetPtStep] : 0., 0.  };
+      AliCFEffGrid* eff = new AliCFEffGrid("eff", "Efficiency x Acceptance x pT Resolution", *dataRebinned);
+      eff->CalculateEfficiency(kStepRecWithRecCutsMeasuredObsPrimaries, kStepGenWithGenCuts);
+      eff->GetNum()->Scale(factor_Numerator);
+      eff->GetDen()->Scale(factor_Denominator);
+      for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {        
+        TH3* hEffAll3D = (TH3*)eff->Project(trackObservableBins[observable],iJetPt,iMCid);  
+        TString hName = TString::Format("fh1FF%s%s_%02d_%02d",observableNames[observable].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2], (Int_t)jetPtLimits[jetPtStep*2+1]);
+        TH1D* hEffSpecies = hEffAll3D->ProjectionX(hName.Data(),jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],speciesBin,speciesBin);          
+        hEffSpecies->Write();
+        delete hEffAll3D;
+        delete hEffSpecies;
+      }
+      delete eff;
+      delete dataRebinned;
     }
   }  
   
-/*  
-  for (Int_t species=0;species<AliPID::kSPECIES;++species) {
-    TString speciesString = TString("_") + TString(AliPID::ParticleShortName(species));
-
-    for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
-      
-    Double_t factor_Numerator[2] = { nOfJets[1][jetPtStep] > 0 ? 1. / nOfJets[1][jetPtStep] : 0., 0.  };
-    Double_t factor_Denominator[2] = { nOfJets[0][jetPtStep] > 0 ? 1. / nOfJets[0][jetPtStep] : 0., 0.  };
-    eff->GetNum()->Scale(factor_Numerator);
-    eff->GetDen()->Scale(factor_Denominator);
-    
-      data->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
-      
-      for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
-        
-        TH1* h = eff->Project(trackObservableBins[observable],species);
-        
-        
-        h->SetNameTitle(TString::Format("fh1FF%s%s%s_%02d_%02d",observableNames[observable].Data(),dirNameEffSteps[effStep].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
-        
-        for (Int_t binNumber = 0;binNumber<=h->GetNbinsX();binNumber++) 
-          h->SetBinContent(binNumber,h->GetBinContent(binNumber)/h->GetBinWidth(binNumber));
-          
-        h->Write();
-      }
-    }
-  }*/
-  
   
   outFile->Close();
+  return 0;
   
 }
