@@ -41,9 +41,9 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
   iDistance = data->GetVar("R");
   ijT = data->GetVar("j_{T} (GeV/c)");
   
-  const Int_t nOfTrackObservables = 2;
-  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ};//, iXi, iDistance, ijT};
-  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z"};//, "Xi", "R", "jT"};  
+  const Int_t nOfTrackObservables = 3;
+  Int_t trackObservableBins[nOfTrackObservables] = {iPt, iZ, iXi};//, iDistance, ijT};
+  TString observableNames[nOfTrackObservables] = {"TrackPt", "Z", "Xi"};//, "R", "jT"};  
   
   //Setting jet limits and getting the number of rec/gen jets from the file associated with the efficiency file
   const Int_t nOfJetBins = 5;
