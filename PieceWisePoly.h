@@ -4,8 +4,7 @@ class PieceWisePoly {
 public:
   PieceWisePoly(Int_t parts, Double_t* cutxvalues, Int_t* polys, Double_t xmin = 0, Double_t xmax = 1, Double_t* params = 0x0, Int_t smooth = 2);
   ~PieceWisePoly();
-  double operator() (double* x, double* p = 0x0);
-  double Evaluate(double* x, double* p = 0x0);
+  double operator() (double* x, double* p = 0x0) {return Eval(x[0], p);};
   double Eval (double x, double* p = 0x0);
   void SetParam(Double_t* params);
   Double_t SumUp(Double_t constant, Int_t start, Int_t end, Int_t derivative, Int_t startn);
