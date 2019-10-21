@@ -1,3 +1,5 @@
+//Creates from the full MC result the correction factors used to compare the fast MC simulation with the full MC simulation
+
 #include "TH3.h"
 #include "./calcEfficiency.C"
 
@@ -104,6 +106,7 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
   
   TFile* outFile = new TFile(outfileName.Data(),"RECREATE");
   
+  //Do for all species
   for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
     AliCFContainer *dataRebinned = new AliCFContainer(*data);
     dataRebinned->SetRangeUser(iJetPt,jetBinLimits[2*jetPtStep],jetBinLimits[2*jetPtStep+1],kTRUE);
@@ -134,6 +137,7 @@ Int_t createFileForBbBCorrections(TString pathNameEfficiency, TString outfileNam
     delete dataRebinned;    
   }  
     
+  //Loop through species  
   for (Int_t species=0;species<AliPID::kSPECIES;++species) {
     TString speciesString = TString("_") + TString(AliPID::ParticleShortName(species));
     for (Int_t jetPtStep = 0;jetPtStep<nOfJetBins;++jetPtStep) {
