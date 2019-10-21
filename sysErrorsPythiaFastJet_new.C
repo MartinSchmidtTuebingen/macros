@@ -166,12 +166,10 @@ void sysErrorsPythiaFastJet(){
   TH1F* hSysErrEff[nModes][nSpecies][nJetPtBins];
   
   TH1F* hSysErrRes[nModes][nSpecies][nJetPtBins];
-
-  TH1F* fh1FFGenPrim[nModes][nSpecies][nJetPtBins];
   
   const Int_t nVar = 2;
   
-  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}"};
+  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}"};//, "#it{#xi}"};
   TString legendEntry[nVar] = {"Efficiency +/- 5%", "Resolution +/- 20%"};
   
   TString nameVar[nVar] = {"Eff", "Res"};
@@ -219,65 +217,40 @@ void sysErrorsPythiaFastJet(){
   
   f1.Close();  
 
-  // Load fast MC results particle level
-
-  TFile f2(strInFileGen,"READ");
-  for (Int_t sp=0; sp<nSpecies; sp++) {
-    gDirectory->cd(Form("Gen%s",strSp[sp].Data()));
-
-    for(Int_t i=0; i<nJetPtBins; i++){
-    
-      // for genLevel doesn't matter which histos we take - eff == 1 
-      for (Int_t mode=0;mode<nModes;++mode) {
-        TString strTitle(Form("fh1FF%sGen%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
-        
-        fh1FFGenPrim[mode][sp][i] = (TH1F*) gDirectory->Get(strTitle);
-        
-        fh1FFGenPrim[mode][sp][i]->SetDirectory(0);
-      }
-    }
-    gDirectory->cd("..");
-  }
-  
-  f2.Close();
-
-
   // ---
   
   for (Int_t var=0;var<2*nVar+1;var++) {
     
     TFile f(strInFile[var].Data(),"READ");
-
+    
     for (Int_t sp=0; sp<nSpecies; sp++) {
-      
-      gDirectory->cd(Form("RecCuts%s",strSp[sp].Data()));
-      
       for(Int_t i=0; i<nJetPtBins; i++){
         
         for (Int_t mode=0;mode<nModes;++mode) {
           TString strTitleRec(Form("fh1FF%sRecCuts%s_%02d_%02d",modeString[mode].Data(),strSp[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
+          TString strTitleGen(Form("fh1FF%sGen%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
           
-          //TODO: Can probably remove from function variables, only used in this scope
-          TH1F* fInput = (TH1F*) gDirectory->Get(strTitleRec);
+          TH1F* fRec = (TH1F*) f.FindObjectAny(strTitleRec);
+          TH1F* fGen = (TH1F*) f.FindObjectAny(strTitleGen);
           
           // -- corr factors
           
           TString strTit(Form("corrFac%s_%03d_%03d_%d",modeString[mode], varPercent[2*var], varPercent[2*var + 1], strSp[sp].Data(), i));
           
-          corrFac[var][mode][sp][i] = (TH1F*) fh1FFGenPrim[mode][sp][i]->Clone(strTit);
-          corrFac[var][mode][sp][i]->Divide(fh1FFGenPrim[mode][sp][i],fInput,1,1,"B");
+          corrFac[var][mode][sp][i] = (TH1F*) fGen->Clone(strTit);
+          corrFac[var][mode][sp][i]->Divide(fGen,fRec,1,1,"B");
           
           /*********/
           
-          delete fInput;
-          fInput = 0x0;
+          delete fRec;
+          fRec = 0x0;
           
-          corrFac[var][mode][sp][i]->SetDirectory(0);
-        
-        }
-        
+          delete fGen;
+          fGen = 0x0;
+          
+          corrFac[var][mode][sp][i]->SetDirectory(0);        
+        }        
       }
-      gDirectory->cd("..");
     }               
     f.Close();
   }
@@ -296,11 +269,9 @@ void sysErrorsPythiaFastJet(){
           
           corrFacSys[var][mode][sp][i] = (TH1F*) corrFac[0][mode][sp][i]->Clone(strTitSys);
           
-          for(Int_t bin=1; bin<=corrFac[0][mode][sp][i]->GetNbinsX(); bin++){
-      
-          Double_t err = 0.5*TMath::Abs(corrFac[var*nVar+1][mode][sp][i]->GetBinContent(bin) - corrFac[var*nVar+2][mode][sp][i]->GetBinContent(bin));
-          
-          corrFacSys[var][mode][sp][i]->SetBinError(bin,err); 
+          for(Int_t bin=1; bin<=corrFac[0][mode][sp][i]->GetNbinsX(); bin++) {
+            Double_t err = 0.5*TMath::Abs(corrFac[var*nVar+1][mode][sp][i]->GetBinContent(bin) - corrFac[var*nVar+2][mode][sp][i]->GetBinContent(bin));  
+            corrFacSys[var][mode][sp][i]->SetBinError(bin,err); 
           }
         }
       }
