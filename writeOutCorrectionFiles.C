@@ -1,3 +1,5 @@
+//Write out the results from fast MC simulation, not calculating correction factors, scaled with nOfJets
+
 #include "TFile.h"
 #include "AliCFContainer.h"
 #include "AliPID.h"

@@ -171,7 +171,7 @@ void sysErrorsPythiaFastJet(){
   TH1F* hSysErrRes[nModes][nSpecies][nJetPtBins];
 
   TH1F* fh1FFGenPrim[nModes][nSpecies][nJetPtBins];
-    
+  
   const Int_t nVar = 2;
   const Bool_t useVariations[nVar] = {kTRUE, kTRUE};
   
