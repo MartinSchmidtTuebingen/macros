@@ -150,8 +150,11 @@ void sysErrorsPythiaFastJet(){
   gStyle->SetTitleY(1.0);
   gStyle->SetTitleH(0.06);//0.054);
   
-  const Int_t nModes = 2;
-  TString modeString[nModes] = {"TrackPt", "Z"};//, "Xi"};
+  const Int_t nModes = 3;
+  
+  const Bool_t useModes[nModes] = {kTRUE, kTRUE, kTRUE};
+  TString modeString[nModes] = {"TrackPt", "Z", "Xi"};
+  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}"};
 
   const Int_t nJetPtBins = 5;
   Double_t jetPtLim[nJetPtBins+1] = {5,10,15,20,30,80}; // nBins+1 entries
@@ -168,12 +171,11 @@ void sysErrorsPythiaFastJet(){
   TH1F* hSysErrRes[nModes][nSpecies][nJetPtBins];
 
   TH1F* fh1FFGenPrim[nModes][nSpecies][nJetPtBins];
-  
+    
   const Int_t nVar = 2;
+  const Bool_t useVariations[nVar] = {kTRUE, kTRUE};
   
-  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}"};
   TString legendEntry[nVar] = {"Efficiency +/- 5%", "Resolution +/- 20%"};
-  
   TString nameVar[nVar] = {"Eff", "Res"};
   
   TH1F* fh1FFRecPrim_recPt[2*nVar+1][nModes][nSpecies][nJetPtBins];
@@ -208,6 +210,9 @@ void sysErrorsPythiaFastJet(){
   for (Int_t sp=0; sp<nSpecies; sp++) {
     for (Int_t i=0; i<nJetPtBins; i++) {
       for (Int_t mode=0;mode<nModes;++mode) {
+        if (!useModes[mode])
+          continue;
+        
         TString strTitle(Form("hBbBCorr%s%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
         
         corrFacOriginalMC[mode][sp][i] = (TH1F*) gDirectory->Get(strTitle);
@@ -229,6 +234,9 @@ void sysErrorsPythiaFastJet(){
     
       // for genLevel doesn't matter which histos we take - eff == 1 
       for (Int_t mode=0;mode<nModes;++mode) {
+        if (!useModes[mode])
+          continue;
+        
         TString strTitle(Form("fh1FF%sGen%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
         
         fh1FFGenPrim[mode][sp][i] = (TH1F*) gDirectory->Get(strTitle);
@@ -245,7 +253,9 @@ void sysErrorsPythiaFastJet(){
   // ---
   
   for (Int_t var=0;var<2*nVar+1;var++) {
-    
+    if (var != 0 && !useVariations[(var-1)/2]) 
+      continue;
+          
     TFile f(strInFile[var].Data(),"READ");
 
     for (Int_t sp=0; sp<nSpecies; sp++) {
@@ -255,9 +265,11 @@ void sysErrorsPythiaFastJet(){
       for(Int_t i=0; i<nJetPtBins; i++){
         
         for (Int_t mode=0;mode<nModes;++mode) {
+          if (!useModes[mode])
+            continue;
+          
           TString strTitleRec(Form("fh1FF%sRecCuts%s_%02d_%02d",modeString[mode].Data(),strSp[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
           
-          //TODO: Can probably remove from function variables, only used in this scope
           TH1F* fInput = (TH1F*) gDirectory->Get(strTitleRec);
           
           // -- corr factors
@@ -272,8 +284,7 @@ void sysErrorsPythiaFastJet(){
           delete fInput;
           fInput = 0x0;
           
-          corrFac[var][mode][sp][i]->SetDirectory(0);
-        
+          corrFac[var][mode][sp][i]->SetDirectory(0);  
         }
         
       }
@@ -291,7 +302,13 @@ void sysErrorsPythiaFastJet(){
   for(Int_t sp=0; sp<nSpecies; sp++) {
     for(Int_t i=0; i<nJetPtBins; i++) {
       for (Int_t mode=0; mode<nModes; mode++) {
+        if (!useModes[mode])
+          continue;      
+        
         for (Int_t var=0; var<nVar; var++) {
+          if (!useVariations[var])
+            continue;
+          
           TString strTitSys(Form("corrFac%sSys%s%s_%d", modeString[mode].Data(), nameVar[var], strSp[sp].Data(),i));
           
           corrFacSys[var][mode][sp][i] = (TH1F*) corrFac[0][mode][sp][i]->Clone(strTitSys);
@@ -325,12 +342,20 @@ void sysErrorsPythiaFastJet(){
   TCanvas* c[nOfCanvases];
   TLegend* leg[nOfCanvases];
   
-  for (Int_t i=0;i<nOfCanvases;i++) {
-    c[i] = createCanvas(Form("c%d",i+1));
-    leg[i] = createLegend(i/2);
+  for (Int_t mode=0;mode<nModes;mode++) {
+    if (!useModes[mode])
+      continue;      
+    for (Int_t var=0;var<nVar;var++) {
+      if (!useVariations[var])
+        continue;
+      c[nVar*mode + var] = createCanvas(Form("c%d",(nVar*mode + var)+1));
+      leg[nVar*mode + var] = createLegend((nVar*mode + var)/2);
+    }
   }
       
   for (Int_t mode=0;mode<nModes;mode++) {
+    if (!useModes[mode])
+      continue;  
     for(Int_t sp=0; sp<nSpeciesPlot; sp++) {
       for(Int_t i=0; i<nJetPtBins-1; i++) {
         if (i != selectBin)
@@ -359,6 +384,9 @@ void sysErrorsPythiaFastJet(){
         corrFac[0][mode][sp][i]->SetLineColor(4); 
         
         for (Int_t var=0;var<nVar;var++) {
+          if (!useVariations[var])
+            continue;
+          
           c[nVar*mode + var]->cd(sp+1);
           corrFac[var][mode][sp][i]->DrawCopy();
         
@@ -389,7 +417,11 @@ void sysErrorsPythiaFastJet(){
   
   if (savePlots) {
     for (Int_t mode=0;mode<nModes;mode++) {
+      if (!useModes[mode])
+        continue;    
       for (Int_t var=0;var<nVar;var++) {
+        if (!useVariations[var])
+          continue;
         c[nVar*mode + var]->SaveAs(Form("%scorrFacMod%s_dNd%s_%02d_%02d.pdf", saveDir.Data(), nameVar[var].Data(), modeString[mode].Data(), (int)jetPtLim[selectBin],(int)jetPtLim[selectBin+1]));
       }
     }
@@ -408,7 +440,11 @@ void sysErrorsPythiaFastJet(){
         Int_t jetPtUpLim = (int) jetPtLim[i+1];
 
         for (Int_t var=0;var<nVar;var++) {
+          if (!useVariations[var])
+            continue;
           for (Int_t mode=0;mode<nModes;mode++) {
+            if (!useModes[mode])
+              continue;  
             TString strName(Form("hSysErr%s%s_%02d_%02d%s",nameVar[var].Data(), modeString[mode].Data(), jetPtLoLim,jetPtUpLim,strSp[sp].Data()));
             
             hSysErr[var][mode][sp][i] = (TH1F*) corrFac[0][mode][sp][i]->Clone(strName.Data());
@@ -435,7 +471,9 @@ void sysErrorsPythiaFastJet(){
       }
     }
     
-    for (Int_t var=0;var<nVar;var++) {  
+    for (Int_t var=0;var<nVar;var++) { 
+      if (!useVariations[var])
+        continue;  
       TString fname = Form("%soutSysErr_%s.root", saveDir.Data(),nameVar[var].Data());
       TFile fOut(fname,"RECREATE");
       
@@ -444,6 +482,8 @@ void sysErrorsPythiaFastJet(){
       for (Int_t sp=0; sp<nSpecies; sp++) {
         for (Int_t i=0; i<nJetPtBins; i++) {
           for (Int_t mode=0;mode<nModes;mode++) {  
+            if (!useModes[mode])
+              continue;  
             hSysErr[var][mode][sp][i]->Write();
           }
         }
