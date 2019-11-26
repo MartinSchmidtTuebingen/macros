@@ -127,7 +127,9 @@ Int_t writeOutCorrectionFiles(TString effFile, TString outfilepath, TString addo
         for (Int_t observable = 0;observable<nOfTrackObservables;++observable) {
           TH1* h = data->Project(usedEffSteps[effStep],trackObservableBins[observable]);
           h->SetNameTitle(TString::Format("fh1FF%s%s%s_%02d_%02d",observableNames[observable].Data(),dirNameEffSteps[effStep].Data(),speciesString.Data(),(Int_t)jetPtLimits[jetPtStep*2],(Int_t)jetPtLimits[jetPtStep*2+1]),"");
-          h->Scale(1.0/nOfJets[TMath::Min(effStep,1)][jetPtStep]);
+    
+          if (nOfJets[TMath::Min(effStep,1)][jetPtStep])
+            h->Scale(1.0/nOfJets[TMath::Min(effStep,1)][jetPtStep]);
           
           for (Int_t binNumber = 0;binNumber<=h->GetNbinsX();binNumber++) 
             h->SetBinContent(binNumber,h->GetBinContent(binNumber)/h->GetBinWidth(binNumber));

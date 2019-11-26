@@ -152,7 +152,7 @@ void sysErrorsPythiaFastJet(){
   
   const Int_t nModes = 3;
   
-  const Bool_t useModes[nModes] = {kTRUE, kTRUE, kTRUE};
+  const Bool_t useModes[nModes] = {kTRUE, kTRUE, kFALSE};
   TString modeString[nModes] = {"TrackPt", "Z", "Xi"};
   TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}"};
 
@@ -173,14 +173,14 @@ void sysErrorsPythiaFastJet(){
   TH1F* fh1FFGenPrim[nModes][nSpecies][nJetPtBins];
   
   const Int_t nVar = 2;
-  const Bool_t useVariations[nVar] = {kTRUE, kTRUE};
+  const Bool_t useVariations[nVar] = {kTRUE, kFALSE};
   
   TString legendEntry[nVar] = {"Efficiency +/- 5%", "Resolution +/- 20%"};
   TString nameVar[nVar] = {"Eff", "Res"};
   
   TH1F* fh1FFRecPrim_recPt[2*nVar+1][nModes][nSpecies][nJetPtBins];
   
-  TH1F* corrFacOriginalMC[nModes][nSpecies][nJetPtBins];
+  TH1F* corrFacOriginalMC[nModes][nSpecies][nJetPtBins] = {0x0};
   
   TH1F* corrFac[2*nVar+1][nModes][nSpecies][nJetPtBins];
 
@@ -206,24 +206,26 @@ void sysErrorsPythiaFastJet(){
   // Load original MC results
 
   TFile f1(strOriginalMCResults,"READ");
-  
-  for (Int_t sp=0; sp<nSpecies; sp++) {
-    for (Int_t i=0; i<nJetPtBins; i++) {
-      for (Int_t mode=0;mode<nModes;++mode) {
-        if (!useModes[mode])
-          continue;
-        
-        TString strTitle(Form("hBbBCorr%s%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));
-        
-        corrFacOriginalMC[mode][sp][i] = (TH1F*) gDirectory->Get(strTitle);
-        
-        corrFacOriginalMC[mode][sp][i]->SetDirectory(0);
+  if (f1.IsZombie()) {
+    cout << "Could not open full simulation file " << strOriginalMCResults << ", no comparison shown." << endl;
+  }
+  else {
+    for (Int_t sp=0; sp<nSpecies; sp++) {
+      for (Int_t i=0; i<nJetPtBins; i++) {
+        for (Int_t mode=0;mode<nModes;++mode) {
+          if (!useModes[mode])
+            continue;
+          
+          TString strTitle(Form("hBbBCorr%s%s_%02d_%02d",modeString[mode].Data(),strSp_10f6a[sp].Data(),(int)jetPtLim[i],(int)jetPtLim[i+1]));        
+          corrFacOriginalMC[mode][sp][i] = (TH1F*) gDirectory->Get(strTitle);
+          corrFacOriginalMC[mode][sp][i]->SetDirectory(0);
+        }
       }
-    }
+    }   
+    f1.Close();  
   }
   
-  f1.Close();  
-
+  //TODO: catch files not present
   // Load fast MC results particle level
 
   TFile f2(strInFileGen,"READ");
@@ -313,11 +315,9 @@ void sysErrorsPythiaFastJet(){
           
           corrFacSys[var][mode][sp][i] = (TH1F*) corrFac[0][mode][sp][i]->Clone(strTitSys);
           
-          for(Int_t bin=1; bin<=corrFac[0][mode][sp][i]->GetNbinsX(); bin++){
-      
-          Double_t err = 0.5*TMath::Abs(corrFac[var*nVar+1][mode][sp][i]->GetBinContent(bin) - corrFac[var*nVar+2][mode][sp][i]->GetBinContent(bin));
-          
-          corrFacSys[var][mode][sp][i]->SetBinError(bin,err); 
+          for(Int_t bin=1; bin<=corrFac[0][mode][sp][i]->GetNbinsX(); bin++) {
+            Double_t err = 0.5*TMath::Abs(corrFac[var*nVar+1][mode][sp][i]->GetBinContent(bin) - corrFac[var*nVar+2][mode][sp][i]->GetBinContent(bin)); 
+            corrFacSys[var][mode][sp][i]->SetBinError(bin,err); 
           }
         }
       }
@@ -393,14 +393,17 @@ void sysErrorsPythiaFastJet(){
           setHistoStyleColor(corrFacSys[var][mode][sp][i],4);
           corrFacSys[var][mode][sp][i]->SetFillColor(7);
           corrFacSys[var][mode][sp][i]->DrawCopy("same,E2");
-
-          setHistoStyleColor(corrFacOriginalMC[mode][sp][i],2);
-          corrFacOriginalMC[mode][sp][i]->SetMarkerStyle(24);
-          corrFacOriginalMC[mode][sp][i]->DrawCopy("same");  
-              
+          
+          if (corrFacOriginalMC[mode][sp][i]) {
+            setHistoStyleColor(corrFacOriginalMC[mode][sp][i],2);
+            corrFacOriginalMC[mode][sp][i]->SetMarkerStyle(24);
+            corrFacOriginalMC[mode][sp][i]->DrawCopy("same");  
+          }
               
           if(sp==0){
-            leg[nVar*mode + var]->AddEntry(corrFacOriginalMC[mode][sp][i],"Full simulation","P");
+            if (corrFacOriginalMC[mode][sp][i])
+              leg[nVar*mode + var]->AddEntry(corrFacOriginalMC[mode][sp][i],"Full simulation","P");
+            
             leg[nVar*mode + var]->AddEntry(corrFac[0][mode][sp][i],"Fast simulation","P");
             leg[nVar*mode + var]->AddEntry(corrFacSys[var][mode][sp][i],legendEntry[var].Data(),"F");
             leg[nVar*mode + var]->Draw();
@@ -451,8 +454,9 @@ void sysErrorsPythiaFastJet(){
             
             hSysErr[var][mode][sp][i]->Reset();
             
-            for(Int_t bin=1; bin<=corrFacSys[0][0][sp][i]->GetNbinsX(); bin++) {
-              if (corrFacOriginalMC[mode][sp][i]->GetBinContent(bin) == 0) continue; 
+            for(Int_t bin=1; bin<=corrFacSys[0][mode][sp][i]->GetNbinsX(); bin++) {
+              if (corrFacOriginalMC[mode][sp][i] && corrFacOriginalMC[mode][sp][i]->GetBinContent(bin) == 0) 
+                continue; 
               
               Double_t sysErr = 0.0;
               
