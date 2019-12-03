@@ -80,7 +80,7 @@ TLegend* createLegend(Int_t type)
 
 TCanvas* createCanvas(TString name)
 {
-  TCanvas* c = new TCanvas(name.Data(),"",760,420); 
+  TCanvas* c = new TCanvas(name.Data(),"",760,420);
   c->Divide(2,2);
   
   for (Int_t i = 1; i <= 4; i++) {
@@ -173,7 +173,7 @@ void sysErrorsPythiaFastJet(){
   TH1F* fh1FFGenPrim[nModes][nSpecies][nJetPtBins];
   
   const Int_t nVar = 2;
-  const Bool_t useVariations[nVar] = {kTRUE, kFALSE};
+  const Bool_t useVariations[nVar] = {kTRUE, kTRUE};
   
   TString legendEntry[nVar] = {"Efficiency +/- 5%", "Resolution +/- 20%"};
   TString nameVar[nVar] = {"Eff", "Res"};
@@ -348,6 +348,7 @@ void sysErrorsPythiaFastJet(){
     for (Int_t var=0;var<nVar;var++) {
       if (!useVariations[var])
         continue;
+
       c[nVar*mode + var] = createCanvas(Form("c%d",(nVar*mode + var)+1));
       leg[nVar*mode + var] = createLegend((nVar*mode + var)/2);
     }
@@ -388,7 +389,7 @@ void sysErrorsPythiaFastJet(){
             continue;
           
           c[nVar*mode + var]->cd(sp+1);
-          corrFac[var][mode][sp][i]->DrawCopy();
+          corrFac[0][mode][sp][i]->DrawCopy();
         
           setHistoStyleColor(corrFacSys[var][mode][sp][i],4);
           corrFacSys[var][mode][sp][i]->SetFillColor(7);
@@ -454,7 +455,7 @@ void sysErrorsPythiaFastJet(){
             
             hSysErr[var][mode][sp][i]->Reset();
             
-            for(Int_t bin=1; bin<=corrFacSys[0][mode][sp][i]->GetNbinsX(); bin++) {
+            for(Int_t bin=1; bin<=corrFacSys[var][mode][sp][i]->GetNbinsX(); bin++) {
               if (corrFacOriginalMC[mode][sp][i] && corrFacOriginalMC[mode][sp][i]->GetBinContent(bin) == 0) 
                 continue; 
               
