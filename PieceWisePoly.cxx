@@ -9,7 +9,7 @@
 #include "AliPID.h"
 
 #include "PieceWisePoly.h"
-
+using namespace std;
 
 PieceWisePoly::PieceWisePoly(Int_t parts, Double_t* cutxvalues, Int_t* polys, Double_t xmin, Double_t xmax,  Double_t* params, Int_t smooth)
   : doSmoothing(2)
@@ -149,10 +149,9 @@ double PieceWisePoly::Eval (double x, double* p) {
 }
 
 void PieceWisePoly::ReadFSParameters(TString parameterFile, TF1* effFunctions) {
-  TFile* f = new TFile(parameterFile.Data(),"UPDATE");
   
   for (Int_t species=0;species<AliPID::kSPECIES;++species) {
-    for (Int_t charge=0;charge<=1;++charge) {
+    for (Int_t charge=0;charge<=1;++charge) {     
       TString name = TString::Format("fastSimulationParameters_%s_%s", AliPID::ParticleShortName(species), charge ? "pos" : "neg");
       TNamed* cont = (TNamed*)f->FindObjectAny(name.Data());
       if (!name)
@@ -163,6 +162,7 @@ void PieceWisePoly::ReadFSParameters(TString parameterFile, TF1* effFunctions) {
       Int_t nOfParts = (((TObjString*)(arrPar->At(0)))->GetString()).Atoi();
       Double_t* cuts = new Double_t[nOfParts-1];
       Int_t* nparameters = new Int_t[nOfParts]; 
+      
       for (Int_t part = 0;part<nOfParts - 1;++part) {
         nparameters[part] = (((TObjString*)(arrPar->At(nOfParts + part)))->GetString()).Atoi();
         cuts[part] = (((TObjString*)(arrPar->At(1 + part)))->GetString()).Atof();
@@ -175,13 +175,12 @@ void PieceWisePoly::ReadFSParameters(TString parameterFile, TF1* effFunctions) {
       for (Int_t param=0;param<pwp->GetNOfParam();++param) {
         func->SetParameter(param,(((TObjString*)(arrPar->At(2*nOfParts + param)))->GetString()).Atof());
       }
-      func->Write();
+      effFunctions[2*species + charge] = func;
       delete nparameters;
       delete cuts;
       delete arrPar;
       delete parString;
     }
   }
-  f->Close();
 }
   
