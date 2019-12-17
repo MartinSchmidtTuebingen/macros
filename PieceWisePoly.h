@@ -15,6 +15,8 @@ public:
   Double_t* GetCuts() {return cuts;};
   Int_t* GetNParameters() {return polyParameters;};
   
+  static void ReadFSParameters(TString parameterFile, TF1* effFunctions);
+  
 private:
   Int_t doSmoothing;
   Int_t nParts;
