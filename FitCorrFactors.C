@@ -35,13 +35,8 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
   Int_t parts[AliPID::kSPECIES][2];
   Double_t* cuts[AliPID::kSPECIES][2];
   Int_t* nparameters[AliPID::kSPECIES][2];
-  PieceWisePoly* pwp[AliPID::kSPECIES][2];
-  TF1* func[AliPID::kSPECIES][2];
-  
-  TF1* effFunctions[AliPID::kSPECIES][2] = {0x0};
-  PieceWisePoly* polynoms[AliPID::kSPECIES][2] = {0x0};
+  PieceWisePoly* polynoms[AliPID::kSPECIES][2];
 
-  
   
   //For negative electrons
   Int_t species = AliPID::kElectron;
@@ -233,9 +228,7 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
     
   for (Int_t species=0;species < AliPID::kSPECIES;species++) {
     for (Int_t charge=0;charge<2;charge++) {
-      pwp[species][charge] = new PieceWisePoly(parts[species][charge], cuts[species][charge], nparameters[species][charge], 0, 50, 0x0, smoothType);
-      effFunctions[species][charge] = new TF1(TString::Format("func_%s_%s",AliPID::ParticleShortName(species), charge ? "pos" : "neg"), pwp[species][charge], 0, 50, pwp[species][charge]->GetNOfParam());
-      polynoms[species][charge] = pwp[species][charge];
+      polynoms[species][charge] = new PieceWisePoly(parts[species][charge], cuts[species][charge], nparameters[species][charge], 0, 50, 0x0, smoothType);
     }
   }                                                          
 
@@ -273,7 +266,7 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
       AliCFEffGrid* effSingleTrack = new AliCFEffGrid("effSingleTrack", "Efficiency x Acceptance", *data);
       effSingleTrack->CalculateEfficiency(kStepRecWithRecCutsMeasuredObsPrimaries, kStepGenWithGenCuts);      
       TH1* h = (TH1D*)effSingleTrack->Project(iPt);
-      h->SetNameTitle(Form("hSingleTrackEfficiency_%s_%d", AliPID::ParticleShortName(species), chargeBin),Form("%s for %d", AliPID::ParticleLatexName(species), chargeBin));
+      h->SetNameTitle(Form("hSingleTrackEfficiency_%s_%s", AliPID::ParticleShortName(species), chargeBin == 2 ? "pos" : "neg"),Form("%s for %s", AliPID::ParticleLatexName(species), chargeBin == 2 ? "pos" : "neg"));
       h->SetLineColor(speciescolors[species] + 2*chargeBin - 2);
       h->SetMarkerColor(speciescolors[species] + 2*chargeBin -2);
       h->GetXaxis()->SetRangeUser(0.15,50);
@@ -282,10 +275,7 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
           h->SetBinContent(i,0);
         }
       }      
-//       TF1* func = (TF1*)effFunctions[species]->Clone();
-//       
-//       TF1* func = new TF1("func",pwp_pi,0,50,pwp_pi->GetNOfParam()); 
-      TF1* func = new TF1("func",polynoms[species][chargeBin-1],0,50,polynoms[species][chargeBin-1]->GetNOfParam()); 
+      TF1* func = new TF1(TString::Format("func_%s_%s",AliPID::ParticleShortName(species), chargeBin == 2 ? "pos" : "neg"),polynoms[species][chargeBin-1],0,50,polynoms[species][chargeBin-1]->GetNOfParam()); 
       func->SetLineColor(speciescolors[species] + 2*chargeBin - 2);
 
       h->Fit(func,"I","same");
@@ -303,11 +293,10 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
       for (Int_t i=0;i<func->GetNpar();++i) {
         parameters += TString::Format(";%f",func->GetParameter(i));
       }
-      TNamed* paramSave = new TNamed(TString::Format("fastSimulationParameters_%s_%d",AliPID::ParticleShortName(species),chargeBin-1).Data(),parameters.Data());
+      TNamed* paramSave = new TNamed(TString::Format("fastSimulationParameters_%s_%s",AliPID::ParticleShortName(species),chargeBin == 2 ? "pos" : "neg").Data(),parameters.Data());
       paramSave->Write();
       h->Draw("same");
       h->Write();
-//       delete h;
       h = 0x0;
       delete effSingleTrack;
       effSingleTrack = 0x0;
