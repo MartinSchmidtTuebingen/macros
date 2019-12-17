@@ -17,6 +17,8 @@ using namespace std;
 
 const Int_t speciescolors[5] = {kMagenta, kYellow, kRed, kGreen, kBlue};
 
+const Int_t smoothType = 2;     // (matching function and first derivative)
+
 Int_t FitCorrFactors(TString effFile, TString outputfile) {
   TFile* fileEff = new TFile(effFile.Data());
   if (!fileEff) {
@@ -29,56 +31,213 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
     printf("Failed to load efficiency container!\n");
     return -1;
   }    
-  
-  TF1* effFunctions[AliPID::kSPECIES] = {0x0};
-  PieceWisePoly* polynoms[AliPID::kSPECIES] = {0x0};
-  
-  //For electrons
-    const Int_t parts_e = 4;
-    Double_t cuts_e[parts_e-1] = {0.6,3.2,8.0};
-    Int_t nparameters_e[parts_e] = {7,5,3,2};
-    PieceWisePoly* pwp_e = new PieceWisePoly(parts_e,cuts_e,nparameters_e,0,50,0x0,2);
-    TF1* func_e = new TF1("func_e",pwp_e,0,50,pwp_e->GetNOfParam());
-    polynoms[AliPID::kElectron] = pwp_e;
-//     Double_t parameters_e[11] = {-1.22427e+00, 2.25003e+01, -9.00154e+01, 1.42536e+02, 1.98605e+00, -2.33708e+02, 1.74505e+02, -4.40750e-01, 1.43504e-01, -1.59226e-02, -6.14939e-04};
-//     func_e->SetParameters(parameters_e);
-    effFunctions[AliPID::kElectron] = func_e;
-    
-  //   For muons
-    const Int_t parts_mu = 6;
-    Double_t cuts_mu[parts_mu-1] = {0.8,1.6,3.0,10.0,12.0};
-    Int_t nparameters_mu[parts_mu] = {9,4,4,3,3,2};   
-    PieceWisePoly* pwp_mu = new PieceWisePoly(parts_mu,cuts_mu,nparameters_mu,0,50,0x0,2);
-    TF1* func_mu = new TF1("func_mu",pwp_mu,0,50,pwp_mu->GetNOfParam());
-    polynoms[AliPID::kMuon] = pwp_mu;
-    effFunctions[AliPID::kMuon] = func_mu;     
-    
-    //For protons
-    const Int_t parts_p = 6;
-    Double_t cuts_p[parts_p-1] = {0.4,1.6,2.5,8.0,12.0};
-    Int_t nparameters_p[parts_p] = {6,4,4,2,5,2};
-    PieceWisePoly* pwp_p = new PieceWisePoly(parts_p,cuts_p,nparameters_p,0,50,0x0,2);
-    TF1* func_p = new TF1("func_p",pwp_p,0,50,pwp_p->GetNOfParam());
-    polynoms[AliPID::kProton] = pwp_p;
-    effFunctions[AliPID::kProton] = func_p;   
 
-    //For kaons
-    const Int_t parts_k = 5;
-    Double_t cuts_k[parts_k-1] = {0.4,1.2,6,15};
-    Int_t nparameters_k[parts_k] = {3,3,5,4,2};  
-    PieceWisePoly* pwp_k = new PieceWisePoly(parts_k,cuts_k,nparameters_k,0,50,0x0,2);
-    TF1* func_k = new TF1("func_k",pwp_k,0,50,pwp_k->GetNOfParam());
-    polynoms[AliPID::kKaon] = pwp_k;
-    effFunctions[AliPID::kKaon] = func_k;
+  Int_t parts[AliPID::kSPECIES][2];
+  Double_t* cuts[AliPID::kSPECIES][2];
+  Int_t* nparameters[AliPID::kSPECIES][2];
+  PieceWisePoly* pwp[AliPID::kSPECIES][2];
+  TF1* func[AliPID::kSPECIES][2];
+  
+  TF1* effFunctions[AliPID::kSPECIES][2] = {0x0};
+  PieceWisePoly* polynoms[AliPID::kSPECIES][2] = {0x0};
 
-  //   For pions
-    const Int_t parts_pi = 6;
-    Double_t cuts_pi[parts_pi-1] = {0.8,1.6,3.0,10.0,12.0};
-    Int_t nparameters_pi[parts_pi] = {9,4,4,3,3,2};   
-    PieceWisePoly* pwp_pi = new PieceWisePoly(parts_pi,cuts_pi,nparameters_pi,0,50,0x0,2);
-    TF1* func_pi = new TF1("func_pi",pwp_pi,0,50,pwp_pi->GetNOfParam());
-    polynoms[AliPID::kPion] = pwp_pi;
-    effFunctions[AliPID::kPion] = func_pi;                                                              
+  
+  
+  //For negative electrons
+  Int_t species = AliPID::kElectron;
+  Int_t charge = 0;
+  parts[species][charge] = 4;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.6;
+  cuts[species][charge][1] = 3.2;
+  cuts[species][charge][2] = 8.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 7;
+  nparameters[species][charge][1] = 5;
+  nparameters[species][charge][2] = 3;
+  nparameters[species][charge][3] = 2;
+  
+  //For positive electrons
+  species = AliPID::kElectron;
+  charge = 1;
+  parts[species][charge] = 4;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.6;
+  cuts[species][charge][1] = 3.2;
+  cuts[species][charge][2] = 8.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 7;
+  nparameters[species][charge][1] = 5;
+  nparameters[species][charge][2] = 3;
+  nparameters[species][charge][3] = 2; 
+    
+  //For negative muons
+  species = AliPID::kMuon;
+  charge = 0;
+  parts[species][charge] = 6;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.8;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 3.0;
+  cuts[species][charge][3] = 10.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 9;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 3;
+  nparameters[species][charge][4] = 3;
+  nparameters[species][charge][5] = 2;
+   
+  //For positive muons
+  species = AliPID::kMuon;
+  charge = 1;
+  parts[species][charge] = 6;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.8;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 3.0;
+  cuts[species][charge][3] = 10.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 9;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 3;
+  nparameters[species][charge][4] = 3;
+  nparameters[species][charge][5] = 2;
+   
+    //For negative pions
+  species = AliPID::kPion;
+  charge = 0;
+  parts[species][charge] = 6;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.8;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 3.0;
+  cuts[species][charge][3] = 10.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 9;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 3;
+  nparameters[species][charge][4] = 3;
+  nparameters[species][charge][5] = 2;
+   
+  //For positive pions
+  species = AliPID::kPion;
+  charge = 1;
+  parts[species][charge] = 6;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.8;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 3.0;
+  cuts[species][charge][3] = 10.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 9;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 3;
+  nparameters[species][charge][4] = 3;
+  nparameters[species][charge][5] = 2;
+    
+    //For negative kaons
+  species = AliPID::kKaon;
+  charge = 0;
+  parts[species][charge] = 5;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.4;
+  cuts[species][charge][1] = 1.2;
+  cuts[species][charge][2] = 6.0;
+  cuts[species][charge][3] = 15.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 3;
+  nparameters[species][charge][1] = 3;
+  nparameters[species][charge][2] = 5;
+  nparameters[species][charge][3] = 4;
+  nparameters[species][charge][4] = 2;
+
+  //For positive kaons
+  species = AliPID::kKaon;
+  charge = 1;
+  parts[species][charge] = 5;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.4;
+  cuts[species][charge][1] = 1.2;
+  cuts[species][charge][2] = 6.0;
+  cuts[species][charge][3] = 15.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 3;
+  nparameters[species][charge][1] = 3;
+  nparameters[species][charge][2] = 5;
+  nparameters[species][charge][3] = 4;
+  nparameters[species][charge][4] = 2;
+  
+    //For negative protons
+  species = AliPID::kProton;
+  charge = 0;
+  parts[species][charge] = 6;
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.4;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 2.5;
+  cuts[species][charge][3] = 8.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 6;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 2;
+  nparameters[species][charge][4] = 5;
+  nparameters[species][charge][5] = 2;
+ 
+  //For positive protons
+  species = AliPID::kProton;
+  charge = 1;
+  parts[species][charge] = 6;  
+  
+  cuts[species][charge] = new Double_t[parts[species][charge]-1];
+  cuts[species][charge][0] = 0.4;
+  cuts[species][charge][1] = 1.6;
+  cuts[species][charge][2] = 2.5;
+  cuts[species][charge][3] = 8.0;
+  cuts[species][charge][4] = 12.0;
+  
+  nparameters[species][charge] = new Int_t[parts[species][charge]];
+  nparameters[species][charge][0] = 6;
+  nparameters[species][charge][1] = 4;
+  nparameters[species][charge][2] = 4;
+  nparameters[species][charge][3] = 2;
+  nparameters[species][charge][4] = 5;
+  nparameters[species][charge][5] = 2;
+    
+  for (Int_t species=0;species < AliPID::kSPECIES;species++) {
+    for (Int_t charge=0;charge<2;charge++) {
+      pwp[species][charge] = new PieceWisePoly(parts[species][charge], cuts[species][charge], nparameters[species][charge], 0, 50, 0x0, smoothType);
+      effFunctions[species][charge] = new TF1(TString::Format("func_%s_%s",AliPID::ParticleShortName(species), charge ? "pos" : "neg"), pwp[species][charge], 0, 50, pwp[species][charge]->GetNOfParam());
+      polynoms[species][charge] = pwp[species][charge];
+    }
+  }                                                          
 
   // For backward compatibility:
   // Check whether "P_{T}" or "p_{T}" is used
@@ -106,9 +265,9 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
   c->SetLogx(kTRUE);
   
   for (Int_t species=0;species<AliPID::kSPECIES;++species) {
-    data->SetRangeUser(iMCid,species+1,species+1,kTRUE);
     for (Int_t chargeBin=1;chargeBin<=2;chargeBin++) {
-      
+  
+      data->SetRangeUser(iMCid,species+1,species+1,kTRUE);
       data->SetRangeUser(iCharge,chargeBin,chargeBin,kTRUE);
 //       data->SetRangeUser(iCharge,-1,-1,kTRUE);
       AliCFEffGrid* effSingleTrack = new AliCFEffGrid("effSingleTrack", "Efficiency x Acceptance", *data);
@@ -126,14 +285,15 @@ Int_t FitCorrFactors(TString effFile, TString outputfile) {
 //       TF1* func = (TF1*)effFunctions[species]->Clone();
 //       
 //       TF1* func = new TF1("func",pwp_pi,0,50,pwp_pi->GetNOfParam()); 
-      TF1* func = new TF1("func",polynoms[species],0,50,polynoms[species]->GetNOfParam()); 
+      TF1* func = new TF1("func",polynoms[species][chargeBin-1],0,50,polynoms[species][chargeBin-1]->GetNOfParam()); 
       func->SetLineColor(speciescolors[species] + 2*chargeBin - 2);
+
       h->Fit(func,"I","same");
-      
-      Int_t nOfParts = polynoms[species]->GetNParts();
+
+      Int_t nOfParts = polynoms[species][chargeBin-1]->GetNParts();
       TString parameters = TString::Format("%d",nOfParts);
-      Double_t* cuts = polynoms[species]->GetCuts();
-      Int_t* nOfParameters = polynoms[species]->GetNParameters();
+      Double_t* cuts = polynoms[species][chargeBin-1]->GetCuts();
+      Int_t* nOfParameters = polynoms[species][chargeBin-1]->GetNParameters();
       for (Int_t part = 0;part<nOfParts - 1;++part) {
         parameters += TString::Format(";%f",cuts[part]);
       }
