@@ -148,8 +148,8 @@ double PieceWisePoly::Eval (double x, double* p) {
   return piecewisepolynom->Eval(x);
 }
 
-void PieceWisePoly::ReadFSParameters(TString parameterFile, TF1* effFunctions) {
-  
+void PieceWisePoly::ReadFSParameters(TString parameterFile, TF1** effFunctions) {
+  TFile* f = new TFile(parameterFile.Data(), "READ");
   for (Int_t species=0;species<AliPID::kSPECIES;++species) {
     for (Int_t charge=0;charge<=1;++charge) {     
       TString name = TString::Format("fastSimulationParameters_%s_%s", AliPID::ParticleShortName(species), charge ? "pos" : "neg");
