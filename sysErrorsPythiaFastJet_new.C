@@ -21,7 +21,6 @@
 
 Bool_t  savePlots = kTRUE;
 Bool_t  writeSysErrors = kTRUE;
-TString saveDir = "files/";
 
 
 // --------------------------------------------------
@@ -142,7 +141,7 @@ TList* getList(TString name = "jets_noGenJets_trackTypeUndef_jetTypeUndef"){
 
 // ----------------------------------------------------------------------------
 
-void sysErrorsPythiaFastJet(){
+void sysErrorsPythiaFastJet_new(TString fileDir = "files", TString saveDir = "files"){
   
   gStyle->SetTitleStyle(0);
   gStyle->SetTitleX(0.5);
@@ -150,11 +149,11 @@ void sysErrorsPythiaFastJet(){
   gStyle->SetTitleY(1.0);
   gStyle->SetTitleH(0.06);//0.054);
   
-  const Int_t nModes = 3;
+  const Int_t nModes = 5;
   
-  const Bool_t useModes[nModes] = {kTRUE, kTRUE, kFALSE};
-  TString modeString[nModes] = {"TrackPt", "Z", "Xi"};
-  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}"};
+  const Bool_t useModes[nModes] = {kTRUE, kTRUE, kTRUE, kTRUE, kTRUE};
+  TString modeString[nModes] = {"TrackPt", "Z", "Xi", "R", "jT"};
+  TString xAxeTitles[nModes] = {"#it{p}_{T} (GeV/#it{c})", "#it{z}", "#it{#xi}", "R", "j_{T} (GeV/#it{c})"};
 
   const Int_t nJetPtBins = 5;
   Double_t jetPtLim[nJetPtBins+1] = {5,10,15,20,30,80}; // nBins+1 entries
@@ -187,17 +186,17 @@ void sysErrorsPythiaFastJet(){
   TH1F* corrFacSys[nVar][nModes][nSpecies][nJetPtBins];
 
   //TString strInFile10f6a = "files/outCorrections_10f6a_tpcCut.root";
-  TString strOriginalMCResults = "files/corrections_LHC13b_efix_p1.root";
+  TString strOriginalMCResults = fileDir + "/corrections_LHC13b2_efix_p1.root";
   
-  TString strResDir = "files";
+  TString strResDir = fileDir;
 
-  TString strInFileGen(Form("%s/outCorrections_PythiaFastJet_eff100_res100.root",strResDir.Data()));
+  TString strInFileGen(Form("%s/outCorrections_PythiaFastJet_Eff100_Res100.root",strResDir.Data()));
   
-  TString strInFile_100_100(Form("%s/outCorrections_PythiaFastJet_eff100_res100.root",strResDir.Data()));
-  TString strInFile_095_100(Form("%s/outCorrections_PythiaFastJet_eff095_res100.root",strResDir.Data()));
-  TString strInFile_105_100(Form("%s/outCorrections_PythiaFastJet_eff105_res100.root",strResDir.Data()));
-  TString strInFile_100_080(Form("%s/outCorrections_PythiaFastJet_eff100_res080.root",strResDir.Data()));
-  TString strInFile_100_120(Form("%s/outCorrections_PythiaFastJet_eff100_res120.root",strResDir.Data()));
+  TString strInFile_100_100(Form("%s/outCorrections_PythiaFastJet_Eff100_Res100.root",strResDir.Data()));
+  TString strInFile_095_100(Form("%s/outCorrections_PythiaFastJet_Eff095_Res100.root",strResDir.Data()));
+  TString strInFile_105_100(Form("%s/outCorrections_PythiaFastJet_Eff105_Res100.root",strResDir.Data()));
+  TString strInFile_100_080(Form("%s/outCorrections_PythiaFastJet_Eff100_Res080.root",strResDir.Data()));
+  TString strInFile_100_120(Form("%s/outCorrections_PythiaFastJet_Eff100_Res120.root",strResDir.Data()));
   
   TString strInFile[2*nVar+1] = {strInFile_100_100, strInFile_095_100, strInFile_105_100, strInFile_100_080, strInFile_100_120};
   
