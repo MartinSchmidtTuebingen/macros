@@ -24,7 +24,7 @@ enum typeMCSysErrors { kNoErrors = 0, kErrorsWithoutMultDep = 1, kErrorsIncludin
 const Int_t numParamsMult = 3;
 
 const TString obsString[kNtypes] = {"Pt", "z", "#xi", "#Delta r", "jT"};
-const TString obsStringMCsysError[kNtypes] = {"Pt", "Z", "Xi", "#Delta r", "jT"};
+const TString obsStringMCsysError[kNtypes] = {"TrackPt", "Z", "Xi", "R", "jT"};
 
 Int_t iPt     = 0;
 Int_t iMCid   = 0;
@@ -1204,6 +1204,8 @@ void getToPionRatioMCrelSysError(TH1D* hMCRelSysErrorToPiRatio[], TH1D* hMCRelSy
   for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
     if (!hMCRelSysError[species] || species == AliPID::kPion)
       continue;
+    
+    cout << "Läuft" << endl;
     
     hMCRelSysErrorToPiRatio[species] = new TH1D(*hMCRelSysError[species]);
     hMCRelSysErrorToPiRatio[species]->Reset();
@@ -2809,6 +2811,31 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
       }
   }
   
+//   {
+//     TH1F* hMCsysErrorEffTmp[AliPID::kSPECIES] = { 0x0, };
+//     TH1F* hMCsysErrorResTmp[AliPID::kSPECIES] = { 0x0, };
+//     TH1F* hMCsysErrorShapeTmp[AliPID::kSPECIES] = { 0x0, };
+//         
+//     TString pathNameMCeff = Form("%s/outSysErr_eff.root", pathMCsysErrors.Data());
+//     TFile* fMCsys_eff = TFile::Open(pathNameMCeff.Data(), "READ");
+//     if (!fMCsys_eff) {
+//     printf("Failed to load file with MC sys errors: %s\n!", pathNameMCeff.Data());
+//     return -1;
+//     }
+//     
+//     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+//     hMCsysErrorEffTmp[species] = (TH1F*)fMCsys_eff->Get(Form("hSysErrEff%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(), lowerJetPt,
+//                                                             upperJetPt, AliPID::ParticleShortName(species)));
+//     
+//     for (Int_t i = 1; i <= hMCsysErrorEffTmp[species]->GetNbinsX(); i++) {
+//         if (TMath::Abs(hMCsysErrorEffTmp[species]->GetXaxis()->GetBinCenter(i) - hEfficiencyWithGF[species]->GetXaxis()->GetBinCenter(i)) > 1e-5) {
+//             printf("Error: Inconsistent binning MC corr <-> MC sys error! Test\n");
+//             return kFALSE;
+//           }
+//         }
+//      }
+//    }
+  
   if (correctEff10d10e) {
     printf("\n\nCorrecting efficiency 10d/10e. Scaling efficiency with (10d: %f, 10e: %f, 10d/10ed: %f, 10e/10de: %f, eff(10e)-eff(10d): %f) factor %f...\n\n",
            statFor10d, statFor10e, ratioStat10d_10de, ratioStat10e_10de, effRatio10eOver10d, effCorrFactor10d10e);
@@ -2905,7 +2932,7 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     if (restrictJetPtAxis) { // In case of jets, load rel. sys. errors from corresponding file
       // Note no error for "noGF" required, since errors not used anyway in that case
       
-      gSystem->Exec(Form("mkdir -p %s",pathMCsysErrors.Data()));
+//       gSystem->Exec(Form("mkdir -p %s",pathMCsysErrors.Data()));
       
       TString pathNameMCeff = Form("%s/outSysErr_eff.root", pathMCsysErrors.Data());
       fMCsys_eff = TFile::Open(pathNameMCeff.Data(), "READ");
@@ -2925,17 +2952,31 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
       fMCsys_shape = TFile::Open(pathNameMCshape.Data(), "READ");
       if (!fMCsys_shape) {
         printf("Failed to load file with MC sys errors: %s\n!", pathNameMCshape.Data());
-        return -1;
+//         return -1;
       }
       
       
       for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+          
+        if (species == AliPID::kMuon)
+            continue;
+        
         hMCsysErrorEffTmp[species] = (TH1F*)fMCsys_eff->Get(Form("hSysErrEff%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(), lowerJetPt,
                                                                 upperJetPt, AliPID::ParticleShortName(species)));
+        
+        cout << Form("hSysErrEff%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(), lowerJetPt, upperJetPt, AliPID::ParticleShortName(species)) << endl;
         hMCsysErrorResTmp[species] = (TH1F*)fMCsys_res->Get(Form("hSysErrRes%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(), lowerJetPt,
                                                                 upperJetPt, AliPID::ParticleShortName(species)));
-        hMCsysErrorShapeTmp[species] = (TH1F*)fMCsys_shape->Get(Form("hSysErrBbB%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(),
-                                                                    lowerJetPt, upperJetPt, AliPID::ParticleShortName(species)));
+//         hMCsysErrorShapeTmp[species] = (TH1F*)fMCsys_shape->Get(Form("hSysErrBbB%s_%02.0f_%2.0f_%s", obsStringMCsysError[iObs].Data(),
+//                                                                     lowerJetPt, upperJetPt, AliPID::ParticleShortName(species)));
+        
+        if (!hMCsysErrorShapeTmp[species]) {
+            hMCsysErrorShapeTmp[species] = (TH1F*)hMCsysErrorEffTmp[species]->Clone("dummy_shape_histogram");
+            for (Int_t i=0;i<=hMCsysErrorShapeTmp[species]->GetNbinsX();++i) {
+                hMCsysErrorShapeTmp[species]->SetBinContent(i,0.0);
+                hMCsysErrorShapeTmp[species]->SetBinError(i,0.0);
+            }
+        }
         if (!hMCsysErrorEffTmp[species] || !hMCsysErrorResTmp[species] || !hMCsysErrorShapeTmp[species]) {
           printf("ERROR: No MC sys error for %s found!\n", AliPID::ParticleShortName(species));
           for (Int_t i = 1; i <= hEfficiencySys[species]->GetNbinsX(); i++)
@@ -2966,7 +3007,6 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
               relSysErr = 0.;
             else if (sysErrorTypeMC == kErrorsForMerging || sysErrorTypeMC == kErrorsForMergingWithoutMultDep)
               relSysErr = relSysErrRes;
-            
             
             // Multiply with correction factor to obtain absolute sys error and set it for the efficiency histo
             hEfficiencySys[species]->SetBinError(i, hEfficiencySys[species]->GetBinContent(i) * relSysErr);
@@ -3087,6 +3127,10 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     
     // Sum them up in quadrature and obtain the total systematic error from these sources
     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+        
+      if (species == AliPID::kMuon)
+          continue;
+      
       if (!hEfficiencyToPiRatioSys[species])
         continue;
       
@@ -3166,6 +3210,9 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     // Systematics of the secondary correction:
     // Assume independent sys errors and just propagate the individual sys errors of the yields to the to-pion ratios.
     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+      if (species == AliPID::kMuon)
+        continue;
+      
       if (hSecToPiRatioSys[species]) {
         for (Int_t i = 1; i <= hSecToPiRatioSys[species]->GetNbinsX(); i++) {
           const Double_t corrFactorToPiRatio = hSecToPiRatioSys[species]->GetBinContent(i);
@@ -3382,6 +3429,8 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     // Multiplicity dependencies, efficiency
     if (sysErrorTypeMC != kErrorsWithoutMultDep && sysErrorTypeMC != kErrorsForMerging && sysErrorTypeMC != kErrorsForMergingOnlyMultDep && sysErrorTypeMC != kErrorsForMergingWithoutMultDep) {
       for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+        if (species == AliPID::kMuon)
+          continue;          
         if (!hEfficiencySys[species])
           continue;
         
@@ -3436,6 +3485,9 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     if (scaleStrangeness &&
         sysErrorTypeMC != kErrorsOnlyMultDep && sysErrorTypeMC != kErrorsForMergingOnlyMultDep) {
       for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
+        if (species == AliPID::kMuon)
+          continue;  
+        
         if (!hSecToPiRatioSys[species])
           continue;
         
@@ -3642,7 +3694,10 @@ Int_t calcEfficiency(TString pathNameEfficiency, TString pathNameData, TString p
     printf("\n**********************\nChecking validity of bins:\n");
     
     for (Int_t species = 0; species < AliPID::kSPECIES; species++) {
-      if (!hMCcorrTotalRelSysError[species] || !hMCcorrTotalSysError[species]) {
+        if (species == AliPID::kMuon)
+          continue;          
+      
+        if (!hMCcorrTotalRelSysError[species] || !hMCcorrTotalSysError[species]) {
         printf("Skipping species %s due to lacking histograms for MC!\n", AliPID::ParticleShortName(species));
         continue;
       }

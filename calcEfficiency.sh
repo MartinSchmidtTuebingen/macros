@@ -31,7 +31,8 @@ fi
 
 #Calculate errors, exclude multiplicity-dependent errors
 # sysErrTypeMC=6  #For Merging without MultDep
-sysErrTypeMC=4  #For Merging
+# sysErrTypeMC=4  #For Merging
+sysErrTypeMC=1  #Errors without MultDep
 
 pathData=$3
 
@@ -50,7 +51,7 @@ fi
 
 pathMCUETruth=${10}
 
-pathSysErr="ONLY_USED_FOR_JETS"
+pathSysErr="~/Documents/Promotion/Analyses/LHC13b2_efix_p1_EfficiencySystematics_new/MCSystematicsFiles"
 
 #Bool_t correctGeantFluka, Bool_t newGeantFluka, Bool_t scaleStrangeness, Bool_t applyMuonCorrection, Int_t chargeMode,
 stringArgs1="kTRUE,kFALSE,kTRUE,kTRUE,$charge"
@@ -75,7 +76,7 @@ jetLoop=$8
 #Double_t etaAbsCut,
 #Double_t eps_trigger,typeMCSysErrors sysErrorTypeMC,Bool_t normaliseToNInel
 #Assume eps_trigger = 1 for mult analysis (careful: May be wrong for peripheral bins)
-stringArgs3="1.,0,kFALSE"
+stringArgs3="1.,$sysErrTypeMC,kFALSE"
 stringArgs3MB="1.,$sysErrTypeMC,kTRUE"
 # stringArgs3MB="1.,0,kTRUE"
 
@@ -117,7 +118,7 @@ corrMultUp=-2
 if [ "$jetLoop" = "true" ]; then
   echo "Processing Jet Loop"
   # Modes: 0=pt, 1=z, 2=xi, 3=R, 4=jT
-  for mode in Z #Pt Z xi R Jt
+  for mode in Z # Pt #Z xi R Jt
   do
     if [ "$mode" = "Pt" ];then
       iOBS=0
@@ -130,7 +131,7 @@ if [ "$jetLoop" = "true" ]; then
     elif [ "$mode" = "Jt" ];then
       iOBS=4
     fi
-    for jetPtString in 5.0_10.0 10.0_15.0 15.0_20.0 20.0_30.0
+    for jetPtString in 5.0_10.0 #10.0_15.0 15.0_20.0 20.0_30.0
     do
       if [ "$jetPtString" = "5.0_10.0" ];then
         lowerJetPt=5.0
